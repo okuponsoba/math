@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>数学クエスト</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero-panel" id="homeView" aria-label="ホーム">
+      <header class="hero-head">
+        <p class="eyebrow">Math Quest</p>
+        <h1>単元を選んでチャレンジ</h1>
+        <p class="lead">問題数と単元を選ぶと、4択の問題が出ます。答えたらすぐ次の問題へ進みます。</p>
+      </header>
+
+      <section class="count-panel" aria-label="問題数">
+        <p class="count-label">問題数</p>
+        <div class="segmented-control">
+          <label>
+            <input type="radio" name="questionCount" value="10" checked>
+            <span>10問</span>
+          </label>
+          <label>
+            <input type="radio" name="questionCount" value="20">
+            <span>20問</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="unit-board" id="unitBoard" aria-label="単元選択"></section>
+    </section>
+
+    <section class="setup-panel hidden" id="radicalSetupView" aria-label="根号の問題設定">
+      <header class="quiz-top">
+        <div>
+          <button class="text-button" type="button" id="setupBackButton">← ホーム</button>
+          <p class="eyebrow">中学3年・根号の計算</p>
+          <h1>問題の種類を選ぶ</h1>
+          <p class="lead">練習したい内容を1つ以上選んでから、チャレンジを始めます。</p>
+        </div>
+      </header>
+
+      <section class="count-panel compact" aria-label="問題数">
+        <p class="count-label">問題数</p>
+        <div class="segmented-control">
+          <label>
+            <input type="radio" name="setupQuestionCount" value="10" checked>
+            <span>10問</span>
+          </label>
+          <label>
+            <input type="radio" name="setupQuestionCount" value="20">
+            <span>20問</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="setup-options" aria-label="問題の種類">
+        <label class="setup-option">
+          <input type="checkbox" name="radicalType" value="transform" checked>
+          <span>
+            <strong>a√bの変形</strong>
+            <small>√の中から平方数を外に出す問題</small>
+          </span>
+        </label>
+        <label class="setup-option">
+          <input type="checkbox" name="radicalType" value="rationalize" checked>
+          <span>
+            <strong>有理化</strong>
+            <small>分母の√を消して、必要なら約分する問題</small>
+          </span>
+        </label>
+        <label class="setup-option">
+          <input type="checkbox" name="radicalType" value="arithmetic" checked>
+          <span>
+            <strong>四則演算</strong>
+            <small>√どうしの足し算・引き算・かけ算・割り算</small>
+          </span>
+        </label>
+      </section>
+
+      <div class="setup-actions">
+        <button class="primary-button" type="button" id="startRadicalButton">開始</button>
+        <p class="setup-note" id="setupNote">複数選ぶと、選んだ種類からランダムに出題します。</p>
+      </div>
+    </section>
+
+    <section class="quiz-panel hidden" id="quizView" aria-label="クイズ">
+      <header class="quiz-top">
+        <div>
+          <button class="text-button" type="button" id="backHomeButton">← ホーム</button>
+          <p class="eyebrow" id="unitLabel">中1 / 正負の計算</p>
+          <h1 id="quizTitle">10問チャレンジ</h1>
+        </div>
+        <div class="round-badge" id="roundBadge">1 / 10</div>
+      </header>
+
+      <div class="progress-track" aria-hidden="true">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+
+      <section class="question-card">
+        <p class="question-label">次の計算を選ぼう</p>
+        <div class="question" id="questionText"></div>
+        <div class="choices" id="choiceList" aria-label="選択肢"></div>
+        <div class="feedback" id="feedback" role="status" aria-live="polite">答えを選んでください。</div>
+      </section>
+    </section>
+
+    <section class="result-panel hidden" id="resultView" aria-label="結果">
+      <header class="hero-head">
+        <p class="eyebrow">Result</p>
+        <h1 id="resultTitle">結果</h1>
+        <p class="lead" id="resultMessage"></p>
+      </header>
+
+      <section class="result-grid">
+        <div class="metric">
+          <span>正解</span>
+          <strong id="correctValue">0</strong>
+        </div>
+        <div class="metric">
+          <span>正答率</span>
+          <strong id="rateValue">0%</strong>
+        </div>
+        <div class="metric">
+          <span>点数</span>
+          <strong id="scoreValue">0</strong>
+        </div>
+      </section>
+
+      <section class="history-box">
+        <h2>解いた問題</h2>
+        <ol id="historyList"></ol>
+      </section>
+
+      <div class="result-actions">
+        <button class="primary-button" type="button" id="retryButton">もう一度</button>
+        <button class="secondary-button" type="button" id="homeButton">単元を選び直す</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
