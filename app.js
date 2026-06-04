@@ -1,10 +1,16 @@
 const units = [
   {
-    grade: "中学1年",
+    grade: "中学1年：正負の数",
     items: [
       {
+        id: "sign-reflex",
+        title: "正負の瞬発ドリル",
+        description: "足し算・引き算・かけ算・割り算の符号を素早く分ける",
+        makeQuestion: makeSignReflexQuestion
+      },
+      {
         id: "signed",
-        title: "正負の計算",
+        title: "正負の基本計算",
         description: "マイナスを含む足し算・引き算・かけ算",
         makeQuestion: makeSignedQuestion
       },
@@ -23,18 +29,18 @@ const units = [
     ]
   },
   {
-    grade: "中学2年",
+    grade: "中学2年：連立方程式",
     items: [
       {
-        id: "coming-linear",
-        title: "文字式の計算",
-        description: "次の追加予定単元",
-        disabled: true
+        id: "linear-system-align",
+        title: "連立方程式：加減法の一手",
+        description: "係数合わせから消去後の式まで確認する",
+        makeQuestion: makeLinearSystemStepQuestion
       }
     ]
   },
   {
-    grade: "中学3年",
+    grade: "中学3年：平方根",
     items: [
       {
         id: "radical",
@@ -125,6 +131,193 @@ function makeSignedQuestion() {
   };
 }
 
+function makeIntegerChoices(answer, distractors = []) {
+  const choices = new Set([answer]);
+  distractors.forEach(value => {
+    if (Number.isFinite(value) && value !== answer) choices.add(value);
+  });
+
+  const spread = Math.max(5, Math.abs(answer));
+  while (choices.size < 4) {
+    const offset = randomInt(-spread, spread);
+    const candidate = answer + offset || answer + randomInt(1, 6);
+    if (candidate !== answer) choices.add(candidate);
+  }
+  return [...choices].sort(() => Math.random() - 0.5);
+}
+
+function makeTextChoices(answerText, distractors = []) {
+  const choices = new Set([answerText]);
+  distractors.forEach(value => {
+    if (value && value !== answerText) choices.add(value);
+  });
+  const fallbackChoices = [
+    "①を2倍、②を3倍",
+    "①を3倍、②を2倍",
+    "①を4倍、②を3倍",
+    "①はそのまま、②を2倍",
+    "①を2倍、②はそのまま"
+  ];
+  for (const choice of fallbackChoices) {
+    if (choices.size >= 4) break;
+    if (choice !== answerText) choices.add(choice);
+  }
+  return [...choices].slice(0, 4).sort(() => Math.random() - 0.5);
+}
+
+function makeRuleConfusionChoices(correctAnswer, confusedAnswer) {
+  return makeIntegerChoices(correctAnswer, [
+    -correctAnswer,
+    confusedAnswer,
+    -confusedAnswer
+  ]);
+}
+
+function makeSignReflexQuestion() {
+  const a = randomInt(3, 9);
+  const b = Math.random() < 0.55 ? a : randomInt(3, 9);
+  const patterns = [
+    "same-negative-add",
+    "same-negative-add",
+    "same-negative-add",
+    "same-negative-multiply",
+    "same-negative-multiply",
+    "negative-add",
+    "negative-multiply",
+    "negative-subtract",
+    "negative-divide",
+    "opposite-subtract",
+    "opposite-divide",
+    "opposite-add",
+    "opposite-multiply"
+  ];
+  const pattern = patterns[randomInt(0, patterns.length - 1)];
+
+  if (pattern === "same-negative-add") {
+    const answer = -a + -a;
+    const confusedAnswer = -a * -a;
+    return {
+      text: `(-${a}) + (-${a})`,
+      answer,
+      choices: makeRuleConfusionChoices(answer, confusedAnswer),
+      hint: `これは足し算です。マイナス方向に${a}進んで、さらにマイナス方向に${a}進むので ${answer} です。マイナス同士でプラスは、かけ算のルールです。`
+    };
+  }
+
+  if (pattern === "same-negative-multiply") {
+    const answer = -a * -a;
+    const confusedAnswer = -a + -a;
+    return {
+      text: `(-${a}) × (-${a})`,
+      answer,
+      choices: makeRuleConfusionChoices(answer, confusedAnswer),
+      hint: `これはかけ算です。マイナスとマイナスのかけ算なので、答えはプラスになります。`
+    };
+  }
+
+  if (pattern === "negative-add") {
+    const answer = -a + -b;
+    const confusedAnswer = -a * -b;
+    return {
+      text: `(-${a}) + (-${b})`,
+      answer,
+      choices: makeRuleConfusionChoices(answer, confusedAnswer),
+      hint: `これは足し算です。マイナスどうしを足すと、答えはもっとマイナスになります。`
+    };
+  }
+
+  if (pattern === "negative-multiply") {
+    const answer = -a * -b;
+    const confusedAnswer = -a + -b;
+    return {
+      text: `(-${a}) × (-${b})`,
+      answer,
+      choices: makeRuleConfusionChoices(answer, confusedAnswer),
+      hint: `これはかけ算です。マイナスとマイナスをかけるので、答えはプラスになります。`
+    };
+  }
+
+  if (pattern === "negative-subtract") {
+    const divisor = randomInt(3, 9);
+    const quotient = randomInt(2, 9);
+    const dividend = divisor * quotient;
+    const answer = -dividend - -divisor;
+    const confusedAnswer = (-dividend) / (-divisor);
+    return {
+      text: `(-${dividend}) - (-${divisor})`,
+      answer,
+      choices: makeRuleConfusionChoices(answer, confusedAnswer),
+      hint: `これは引き算です。マイナスを引くので、反対のプラスに直して考えます。割り算の符号ルールとは分けます。`
+    };
+  }
+
+  if (pattern === "negative-divide") {
+    const divisor = randomInt(3, 9);
+    const quotient = randomInt(2, 9);
+    const dividend = divisor * quotient;
+    const answer = (-dividend) / (-divisor);
+    const confusedAnswer = -dividend - -divisor;
+    return {
+      text: `(-${dividend}) ÷ (-${divisor})`,
+      answer,
+      choices: makeRuleConfusionChoices(answer, confusedAnswer),
+      hint: `これは割り算です。マイナスとマイナスの割り算なので、答えはプラスになります。`
+    };
+  }
+
+  if (pattern === "opposite-subtract") {
+    const divisor = randomInt(3, 9);
+    const quotient = randomInt(2, 9);
+    const dividend = divisor * quotient;
+    const answer = dividend - -divisor;
+    const confusedAnswer = dividend / -divisor;
+    return {
+      text: `(+${dividend}) - (-${divisor})`,
+      answer,
+      choices: makeRuleConfusionChoices(answer, confusedAnswer),
+      hint: `これは引き算です。マイナスを引くので、+${dividend} + ${divisor} に直して考えます。`
+    };
+  }
+
+  if (pattern === "opposite-divide") {
+    const divisor = randomInt(3, 9);
+    const quotient = randomInt(2, 9);
+    const dividend = divisor * quotient;
+    const answer = dividend / -divisor;
+    const confusedAnswer = dividend - -divisor;
+    return {
+      text: `(+${dividend}) ÷ (-${divisor})`,
+      answer,
+      choices: makeRuleConfusionChoices(answer, confusedAnswer),
+      hint: `これは割り算です。プラスとマイナスの割り算なので、答えはマイナスになります。`
+    };
+  }
+
+  if (pattern === "opposite-add") {
+    let oppositeB = b;
+    if (oppositeB === a) oppositeB = a === 9 ? 8 : a + 1;
+    const answer = a + -oppositeB;
+    const confusedAnswer = a * -oppositeB;
+    return {
+      text: `(+${a}) + (-${oppositeB})`,
+      answer,
+      choices: makeRuleConfusionChoices(answer, confusedAnswer),
+      hint: `これは足し算です。プラス方向とマイナス方向のどちらが大きいかを比べます。`
+    };
+  }
+
+  let multiplyB = b;
+  if (multiplyB === a) multiplyB = a === 9 ? 8 : a + 1;
+  const multiplyAnswer = a * -multiplyB;
+  const confusedAnswer = a + -multiplyB;
+  return {
+    text: `(+${a}) × (-${multiplyB})`,
+    answer: multiplyAnswer,
+    choices: makeRuleConfusionChoices(multiplyAnswer, confusedAnswer),
+    hint: `これはかけ算です。プラスとマイナスをかけるので、答えはマイナスになります。`
+  };
+}
+
 function makePowerQuestion() {
   const absoluteBase = randomInt(2, 6);
   const isNegativeBase = Math.random() < 0.8;
@@ -184,6 +377,158 @@ function makePowerQuestion() {
 
 function makeMixedQuestion() {
   return Math.random() < 0.55 ? makeSignedQuestion() : makePowerQuestion();
+}
+
+function leastCommonMultiple(a, b) {
+  return Math.abs(a * b) / greatestCommonDivisor(a, b);
+}
+
+function formatCoefficient(coefficient, variable, isFirst = false) {
+  const sign = coefficient < 0 ? "-" : "+";
+  const absolute = Math.abs(coefficient);
+  const body = absolute === 1 ? variable : `${absolute}${variable}`;
+  if (isFirst) return coefficient < 0 ? `-${body}` : body;
+  return `${sign} ${body}`;
+}
+
+function formatLinearEquation(xCoefficient, yCoefficient, constant) {
+  return `${formatCoefficient(xCoefficient, "x", true)} ${formatCoefficient(yCoefficient, "y")} = ${constant}`;
+}
+
+function formatEquationMultiplier(label, multiplier) {
+  return multiplier === 1 ? `${label}はそのまま` : `${label}を${multiplier}倍`;
+}
+
+function formatMultiplierPair(firstMultiplier, secondMultiplier) {
+  return `${formatEquationMultiplier("①", firstMultiplier)}、${formatEquationMultiplier("②", secondMultiplier)}`;
+}
+
+function formatLinearSystemHtml(firstEquation, secondEquation, target, operationLabel) {
+  return `
+    <div class="system-question">
+      <p>${escapeHtml(target)}を消すために係数をそろえたあと、${escapeHtml(operationLabel)} を計算した式として正しいものはどれ？</p>
+      <div class="linear-system" aria-label="連立方程式">
+        <span class="system-brace">{</span>
+        <span class="system-equation">${escapeHtml(firstEquation)}</span>
+        <span class="system-number">・・・①</span>
+        <span class="system-equation">${escapeHtml(secondEquation)}</span>
+        <span class="system-number">・・・②</span>
+      </div>
+    </div>
+  `;
+}
+
+function combineEquations(firstEquation, secondEquation, operation) {
+  const sign = operation === "subtract" ? -1 : 1;
+  return {
+    x: firstEquation.x + sign * secondEquation.x,
+    y: firstEquation.y + sign * secondEquation.y,
+    constant: firstEquation.constant + sign * secondEquation.constant
+  };
+}
+
+function formatReducedEquation(equation) {
+  const terms = [];
+  if (equation.x !== 0) terms.push(formatCoefficient(equation.x, "x", true));
+  if (equation.y !== 0) terms.push(formatCoefficient(equation.y, "y", terms.length === 0));
+  const left = terms.length ? terms.join(" ") : "0";
+  return `${left} = ${equation.constant}`;
+}
+
+function scaledEquation(xCoefficient, yCoefficient, constant, multiplier) {
+  return {
+    x: xCoefficient * multiplier,
+    y: yCoefficient * multiplier,
+    constant: constant * multiplier
+  };
+}
+
+function formatEquationObject(equation) {
+  return formatLinearEquation(equation.x, equation.y, equation.constant);
+}
+
+function formatSystemStepChoice(firstMultiplier, secondMultiplier, firstEquation, secondEquation, operationLabel, resultEquation) {
+  return `${formatMultiplierPair(firstMultiplier, secondMultiplier)}
+①' ${firstEquation}
+②' ${secondEquation}
+${operationLabel}：${resultEquation}`;
+}
+
+function makeLinearSystemStepQuestion() {
+  const target = Math.random() < 0.5 ? "x" : "y";
+  const solutionX = randomInt(-4, 5) || 2;
+  const solutionY = randomInt(-4, 5) || -3;
+  let firstX = randomInt(2, 5);
+  let secondX = randomInt(2, 5);
+  let firstY = randomInt(2, 5);
+  let secondY = randomInt(2, 5);
+
+  while (target === "x" && firstX === secondX) secondX = randomInt(2, 5);
+  while (target === "y" && firstY === secondY) secondY = randomInt(2, 5);
+  if (Math.random() < 0.45) secondX *= -1;
+  if (Math.random() < 0.45) secondY *= -1;
+
+  const firstConstant = firstX * solutionX + firstY * solutionY;
+  const secondConstant = secondX * solutionX + secondY * solutionY;
+  const firstTarget = target === "x" ? Math.abs(firstX) : Math.abs(firstY);
+  const secondTarget = target === "x" ? Math.abs(secondX) : Math.abs(secondY);
+  const lcm = leastCommonMultiple(firstTarget, secondTarget);
+  const firstMultiplier = lcm / firstTarget;
+  const secondMultiplier = lcm / secondTarget;
+  const otherTarget = target === "x" ? "y" : "x";
+
+  const firstEquation = formatLinearEquation(firstX, firstY, firstConstant);
+  const secondEquation = formatLinearEquation(secondX, secondY, secondConstant);
+  const firstTargetSigned = target === "x" ? firstX : firstY;
+  const secondTargetSigned = target === "x" ? secondX : secondY;
+  const operation = firstTargetSigned * secondTargetSigned > 0 ? "subtract" : "add";
+  const operationLabel = operation === "subtract" ? "①' - ②'" : "①' + ②'";
+  const wrongOperation = operation === "subtract" ? "add" : "subtract";
+  const wrongOperationLabel = wrongOperation === "subtract" ? "①' - ②'" : "①' + ②'";
+
+  const makeTransformed = (firstChoiceMultiplier, secondChoiceMultiplier) => {
+    const firstScaled = scaledEquation(firstX, firstY, firstConstant, firstChoiceMultiplier);
+    const secondScaled = scaledEquation(secondX, secondY, secondConstant, secondChoiceMultiplier);
+    return {
+      first: firstScaled,
+      second: secondScaled,
+      firstText: formatEquationObject(firstScaled),
+      secondText: formatEquationObject(secondScaled)
+    };
+  };
+
+  const transformed = makeTransformed(firstMultiplier, secondMultiplier);
+  const correctResult = formatReducedEquation(combineEquations(transformed.first, transformed.second, operation));
+  const wrongOperationResult = formatReducedEquation(combineEquations(transformed.first, transformed.second, wrongOperation));
+  const makeChoice = (firstChoiceMultiplier, secondChoiceMultiplier, choiceOperationLabel, resultEquation) => {
+    const choiceTransformed = makeTransformed(firstChoiceMultiplier, secondChoiceMultiplier);
+    return formatSystemStepChoice(
+      firstChoiceMultiplier,
+      secondChoiceMultiplier,
+      choiceTransformed.firstText,
+      choiceTransformed.secondText,
+      choiceOperationLabel,
+      resultEquation
+    );
+  };
+  const answerText = makeChoice(firstMultiplier, secondMultiplier, operationLabel, correctResult);
+  const wrongOperationText = makeChoice(firstMultiplier, secondMultiplier, wrongOperationLabel, wrongOperationResult);
+  const swappedTransformed = makeTransformed(secondMultiplier, firstMultiplier);
+  const swappedResult = formatReducedEquation(combineEquations(swappedTransformed.first, swappedTransformed.second, operation));
+  const swappedText = makeChoice(secondMultiplier, firstMultiplier, operationLabel, swappedResult);
+  const wrongResult = target === "x"
+    ? formatReducedEquation({ x: 0, y: combineEquations(transformed.first, transformed.second, operation).y - 2, constant: combineEquations(transformed.first, transformed.second, operation).constant })
+    : formatReducedEquation({ x: combineEquations(transformed.first, transformed.second, operation).x + 2, y: 0, constant: combineEquations(transformed.first, transformed.second, operation).constant });
+  const wrongResultText = makeChoice(firstMultiplier, secondMultiplier, operationLabel, wrongResult);
+  return {
+    text: `次の連立方程式で、${target}を消すために係数をそろえたあと、${operationLabel} を計算した式として正しいものはどれ？ ① ${firstEquation} ② ${secondEquation}`,
+    html: formatLinearSystemHtml(firstEquation, secondEquation, target, operationLabel),
+    answerText,
+    choices: makeTextChoices(answerText, [wrongOperationText, swappedText, wrongResultText]),
+    hint: `${target}の係数は ${firstTarget} と ${secondTarget} なので、最小公倍数の ${lcm} にそろえます。係数が同じ符号なら引く、反対の符号なら足します。${otherTarget}ではなく、消したい ${target} を見ます。`,
+    compact: true,
+    textChoices: true
+  };
 }
 
 function simplifyRadicand(n) {
@@ -325,6 +670,10 @@ function formatMath(value) {
   return html;
 }
 
+function formatChoice(value) {
+  return formatMath(value).replaceAll("\n", "<br>");
+}
+
 function makeRadicalTransformQuestion() {
   const bases = [2, 3, 5, 6, 7];
   const base = bases[randomInt(0, bases.length - 1)];
@@ -418,14 +767,7 @@ function makeRadicalQuestion() {
 }
 
 function makeChoices(answer) {
-  const choices = new Set([answer]);
-  const spread = Math.max(4, Math.abs(answer));
-  while (choices.size < 4) {
-    const offset = randomInt(-spread, spread);
-    const candidate = answer + offset || answer + randomInt(1, 6);
-    if (candidate !== answer) choices.add(candidate);
-  }
-  return [...choices].sort(() => Math.random() - 0.5);
+  return makeIntegerChoices(answer);
 }
 
 function makeRadicalChoices(answerText) {
@@ -446,7 +788,7 @@ function buildQuestion(unit) {
   const q = unit.makeQuestion();
   return {
     ...q,
-    choices: q.answerText ? makeRadicalChoices(q.answerText) : makeChoices(q.answer)
+    choices: q.choices || (q.answerText ? makeRadicalChoices(q.answerText) : makeChoices(q.answer))
   };
 }
 
@@ -544,13 +886,15 @@ function startQuiz(unit) {
 function renderQuestion() {
   const q = state.questions[state.index];
   state.locked = false;
-  questionText.innerHTML = formatMath(q.text);
+  questionText.classList.toggle("compact", !!q.compact);
+  choiceList.classList.toggle("text-choices", !!q.textChoices);
+  questionText.innerHTML = q.html || formatMath(q.text);
   roundBadge.textContent = `${state.index + 1}問目`;
   progressFill.style.width = `${(state.index / state.questionCount) * 100}%`;
   feedback.className = "feedback";
   feedback.textContent = "答えを選んでください。";
   choiceList.innerHTML = q.choices.map(choice => `
-    <button class="choice-button" type="button" data-choice="${escapeHtml(choice)}">${formatMath(choice)}</button>
+    <button class="choice-button" type="button" data-choice="${escapeHtml(choice)}">${formatChoice(choice)}</button>
   `).join("");
 
   choiceList.querySelectorAll(".choice-button").forEach(button => {
@@ -596,7 +940,7 @@ function answerQuestion(choice, button) {
 
 function showResult() {
   const rate = Math.round((state.correct / state.questionCount) * 100);
-  const score = state.correct * 10;
+  const score = rate;
   correctValue.textContent = `${state.questionCount}問中${state.correct}問`;
   rateValue.textContent = `${rate}%`;
   scoreValue.textContent = score;
