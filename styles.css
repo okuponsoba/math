@@ -136,9 +136,14 @@ h1 {
   background: var(--ink);
 }
 
+.grade-board,
 .unit-board {
   display: grid;
   gap: 18px;
+}
+
+.grade-board {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .grade-section {
@@ -178,6 +183,15 @@ h1 {
   align-content: space-between;
 }
 
+.grade-card {
+  min-height: 180px;
+  align-content: center;
+}
+
+.grade-card strong {
+  font-size: clamp(24px, 4vw, 34px);
+}
+
 .unit-card strong {
   font-size: 21px;
 }
@@ -186,6 +200,12 @@ h1 {
   color: var(--muted);
   line-height: 1.5;
   font-weight: 700;
+}
+
+.unit-card small {
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 900;
 }
 
 .unit-card:hover,
@@ -302,6 +322,7 @@ h1 {
 }
 
 .question-card {
+  position: relative;
   min-height: 440px;
   display: grid;
   align-content: center;
@@ -412,6 +433,59 @@ h1 {
   vertical-align: -0.08em;
 }
 
+.root-expression {
+  display: inline-flex;
+  align-items: flex-start;
+  color: currentColor;
+  font-family: "Cambria Math", "STIX Two Math", "Times New Roman", serif;
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.root-symbol {
+  display: inline-block;
+  font-size: 1.08em;
+  line-height: 1;
+  transform: translateY(0.03em);
+}
+
+.root-radicand {
+  display: inline-block;
+  margin-left: -0.03em;
+  padding: 0.08em 0.08em 0;
+  border-top: 0.07em solid currentColor;
+  line-height: 0.95;
+}
+
+.fraction-stack {
+  display: inline-grid;
+  grid-template-rows: auto auto;
+  align-items: center;
+  justify-items: center;
+  margin: 0 0.12em;
+  vertical-align: -0.34em;
+  font-family: "Cambria Math", "STIX Two Math", "Times New Roman", serif;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.fraction-top,
+.fraction-bottom {
+  display: block;
+  padding: 0 0.18em;
+  line-height: 1;
+}
+
+.fraction-top {
+  border-bottom: 0.07em solid currentColor;
+  padding-bottom: 0.08em;
+}
+
+.fraction-bottom {
+  padding-top: 0.08em;
+}
+
 .katex {
   color: currentColor;
   font-size: 0.98em;
@@ -427,10 +501,6 @@ h1 {
   font-size: 0.98em;
 }
 
-.choice-button .katex {
-  font-size: 0.92em;
-}
-
 .feedback .katex,
 #historyList .katex {
   font-size: 1em;
@@ -439,11 +509,6 @@ h1 {
 .math-fraction {
   margin: 0 0.14em;
   vertical-align: -0.28em;
-}
-
-.choice-button .math-inline,
-.choice-button .math-fraction {
-  font-size: 0.92em;
 }
 
 .feedback .math-inline,
@@ -494,6 +559,62 @@ h1 {
 .feedback.wrong {
   background: rgba(194, 65, 93, 0.12);
   color: var(--rose);
+}
+
+.next-button {
+  justify-self: start;
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 8px;
+  color: white;
+  background: var(--ink);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.next-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(31, 41, 51, 0.14);
+}
+
+.answer-stamp {
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  left: 50%;
+  display: block;
+  color: #e11d48;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+  font-size: min(260px, 46vw);
+  font-weight: 900;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  text-shadow: 0 10px 24px rgba(225, 29, 72, 0.18);
+  transform: translate(-50%, -18%) scale(0.82) rotate(-8deg);
+}
+
+.answer-stamp.show {
+  animation: stamp-rise 720ms ease-out forwards;
+}
+
+@keyframes stamp-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 28%) scale(0.82) rotate(-8deg);
+  }
+
+  35% {
+    opacity: 0.96;
+    transform: translate(-50%, -54%) scale(1.03) rotate(-8deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -78%) scale(1) rotate(-8deg);
+  }
 }
 
 .result-grid {
@@ -595,6 +716,7 @@ h1 {
   }
 
   .unit-grid,
+  .grade-board,
   .setup-options,
   .choices,
   .result-grid,

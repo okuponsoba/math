@@ -34,8 +34,8 @@ const units = [
       {
         id: "linear-system-align",
         title: "連立方程式：加減法の一手",
-        description: "係数合わせから消去後の式まで確認する",
-        makeQuestion: makeLinearSystemStepQuestion
+        description: "整数・分数・小数の式変形を確認する",
+        makeQuestion: makeLinearSystemQuestion
       }
     ]
   },
@@ -54,20 +54,27 @@ const units = [
 
 const state = {
   selectedUnit: null,
+  selectedGradeIndex: 0,
   selectedRadicalTypes: ["transform", "rationalize", "arithmetic"],
+  selectedLinearTypes: ["integer"],
   questionCount: 10,
   questions: [],
   index: 0,
   correct: 0,
   history: [],
-  locked: false
+  locked: false,
+  missedCurrent: false
 };
 
 const homeView = document.querySelector("#homeView");
+const unitView = document.querySelector("#unitView");
+const linearSetupView = document.querySelector("#linearSetupView");
 const radicalSetupView = document.querySelector("#radicalSetupView");
 const quizView = document.querySelector("#quizView");
 const resultView = document.querySelector("#resultView");
+const gradeBoard = document.querySelector("#gradeBoard");
 const unitBoard = document.querySelector("#unitBoard");
+const gradeTitle = document.querySelector("#gradeTitle");
 const unitLabel = document.querySelector("#unitLabel");
 const quizTitle = document.querySelector("#quizTitle");
 const roundBadge = document.querySelector("#roundBadge");
@@ -75,6 +82,8 @@ const progressFill = document.querySelector("#progressFill");
 const questionText = document.querySelector("#questionText");
 const choiceList = document.querySelector("#choiceList");
 const feedback = document.querySelector("#feedback");
+const nextButton = document.querySelector("#nextButton");
+const answerStamp = document.querySelector("#answerStamp");
 const resultTitle = document.querySelector("#resultTitle");
 const resultMessage = document.querySelector("#resultMessage");
 const correctValue = document.querySelector("#correctValue");
@@ -84,15 +93,86 @@ const historyList = document.querySelector("#historyList");
 const retryButton = document.querySelector("#retryButton");
 const homeButton = document.querySelector("#homeButton");
 const backHomeButton = document.querySelector("#backHomeButton");
+const backGradeButton = document.querySelector("#backGradeButton");
 const setupBackButton = document.querySelector("#setupBackButton");
+const linearSetupBackButton = document.querySelector("#linearSetupBackButton");
+const startLinearButton = document.querySelector("#startLinearButton");
 const startRadicalButton = document.querySelector("#startRadicalButton");
 const setupNote = document.querySelector("#setupNote");
+const linearSetupNote = document.querySelector("#linearSetupNote");
+const linearTypeInputs = [...document.querySelectorAll('input[name="linearType"]')];
 const radicalTypeInputs = [...document.querySelectorAll('input[name="radicalType"]')];
 const questionCountInputs = [...document.querySelectorAll('input[name="questionCount"]')];
+const linearQuestionCountInputs = [...document.querySelectorAll('input[name="linearQuestionCount"]')];
 const setupQuestionCountInputs = [...document.querySelectorAll('input[name="setupQuestionCount"]')];
 
 function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomChoice(items) {
+  return items[randomInt(0, items.length - 1)];
+}
+
+function randomNonZeroInt(min, max) {
+  let value = 0;
+  while (value === 0) value = randomInt(min, max);
+  return value;
+}
+
+function maybeNegative(value, chance = 0.5) {
+  return Math.random() < chance ? -value : value;
+}
+
+function hasRepeatedDigit(value) {
+  const digits = String(Math.abs(value));
+  return digits.length > 1 && new Set(digits).size === 1;
+}
+
+function makeDivisionPair() {
+  const divisors = [3, 4, 5, 6, 7, 8, 9, 11, 12];
+  const quotients = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  let divisor = randomChoice(divisors);
+  let quotient = randomChoice(quotients);
+  let dividend = divisor * quotient;
+  let guard = 0;
+  while (
+    guard < 80 &&
+    (
+      hasRepeatedDigit(dividend) ||
+      dividend > 96 ||
+      dividend % 10 === 0 ||
+      String(Math.abs(dividend)).endsWith(String(Math.abs(divisor))) ||
+      Math.abs(dividend - divisor) < 12 ||
+      divisor === quotient
+    )
+  ) {
+    divisor = randomChoice(divisors);
+    quotient = randomChoice(quotients);
+    dividend = divisor * quotient;
+    guard += 1;
+  }
+  return { dividend, divisor, quotient };
+}
+
+function makeSubtractionPair() {
+  let left = randomInt(14, 96);
+  let right = randomInt(3, 18);
+  let guard = 0;
+  while (
+    guard < 80 &&
+    (
+      hasRepeatedDigit(left) ||
+      String(left).endsWith(String(right)) ||
+      Math.abs(left - right) < 12 ||
+      left % right !== 0
+    )
+  ) {
+    left = randomInt(14, 96);
+    right = randomInt(3, 18);
+    guard += 1;
+  }
+  return { left, right };
 }
 
 function signedNumber(n) {
@@ -113,9 +193,12 @@ function toSuperscript(n) {
 function makeSignedQuestion() {
   const ops = ["+", "-", "×"];
   const op = ops[randomInt(0, ops.length - 1)];
-  const a = randomInt(-12, 12);
-  let b = randomInt(-12, 12);
-  if (op === "×" && b === 0) b = randomInt(1, 9);
+  const range = op === "×" ? 12 : 24;
+  const a = randomNonZeroInt(-range, range);
+  let b = randomNonZeroInt(-range, range);
+  if (op === "×") {
+    b = randomNonZeroInt(-12, 12);
+  }
   const showPlusSigns = Math.random() < 0.45;
   const leftText = showPlusSigns ? signedNumberWithPlus(a) : signedNumber(a);
   const rightText = showPlusSigns ? signedNumberWithPlus(b) : signedNumber(b);
@@ -174,15 +257,13 @@ function makeRuleConfusionChoices(correctAnswer, confusedAnswer) {
 }
 
 function makeSignReflexQuestion() {
-  const a = randomInt(3, 9);
-  const b = Math.random() < 0.55 ? a : randomInt(3, 9);
+  const a = randomInt(3, 14);
+  let b = randomInt(3, 14);
+  while (b === a) b = randomInt(3, 14);
   const patterns = [
-    "same-negative-add",
-    "same-negative-add",
-    "same-negative-add",
-    "same-negative-multiply",
-    "same-negative-multiply",
     "negative-add",
+    "negative-add",
+    "negative-multiply",
     "negative-multiply",
     "negative-subtract",
     "negative-divide",
@@ -238,13 +319,11 @@ function makeSignReflexQuestion() {
   }
 
   if (pattern === "negative-subtract") {
-    const divisor = randomInt(3, 9);
-    const quotient = randomInt(2, 9);
-    const dividend = divisor * quotient;
-    const answer = -dividend - -divisor;
-    const confusedAnswer = (-dividend) / (-divisor);
+    const { left, right } = makeSubtractionPair();
+    const answer = -left - -right;
+    const confusedAnswer = (-left) / (-right);
     return {
-      text: `(-${dividend}) - (-${divisor})`,
+      text: `(-${left}) - (-${right})`,
       answer,
       choices: makeRuleConfusionChoices(answer, confusedAnswer),
       hint: `これは引き算です。マイナスを引くので、反対のプラスに直して考えます。割り算の符号ルールとは分けます。`
@@ -252,9 +331,7 @@ function makeSignReflexQuestion() {
   }
 
   if (pattern === "negative-divide") {
-    const divisor = randomInt(3, 9);
-    const quotient = randomInt(2, 9);
-    const dividend = divisor * quotient;
+    const { dividend, divisor } = makeDivisionPair();
     const answer = (-dividend) / (-divisor);
     const confusedAnswer = -dividend - -divisor;
     return {
@@ -266,23 +343,19 @@ function makeSignReflexQuestion() {
   }
 
   if (pattern === "opposite-subtract") {
-    const divisor = randomInt(3, 9);
-    const quotient = randomInt(2, 9);
-    const dividend = divisor * quotient;
-    const answer = dividend - -divisor;
-    const confusedAnswer = dividend / -divisor;
+    const { left, right } = makeSubtractionPair();
+    const answer = left - -right;
+    const confusedAnswer = left / -right;
     return {
-      text: `(+${dividend}) - (-${divisor})`,
+      text: `(+${left}) - (-${right})`,
       answer,
       choices: makeRuleConfusionChoices(answer, confusedAnswer),
-      hint: `これは引き算です。マイナスを引くので、+${dividend} + ${divisor} に直して考えます。`
+      hint: `これは引き算です。マイナスを引くので、+${left} + ${right} に直して考えます。`
     };
   }
 
   if (pattern === "opposite-divide") {
-    const divisor = randomInt(3, 9);
-    const quotient = randomInt(2, 9);
-    const dividend = divisor * quotient;
+    const { dividend, divisor } = makeDivisionPair();
     const answer = dividend / -divisor;
     const confusedAnswer = dividend - -divisor;
     return {
@@ -319,7 +392,7 @@ function makeSignReflexQuestion() {
 }
 
 function makePowerQuestion() {
-  const absoluteBase = randomInt(2, 6);
+  const absoluteBase = randomInt(2, 9);
   const isNegativeBase = Math.random() < 0.8;
   const base = isNegativeBase ? -absoluteBase : absoluteBase;
   const exponent = randomInt(2, 3);
@@ -447,6 +520,98 @@ function formatEquationObject(equation) {
   return formatLinearEquation(equation.x, equation.y, equation.constant);
 }
 
+function makeBaseLinearSystem() {
+  const solutionX = randomNonZeroInt(-6, 6);
+  const solutionY = randomNonZeroInt(-6, 6);
+  const firstX = maybeNegative(randomInt(1, 8), 0.35);
+  const firstY = maybeNegative(randomInt(1, 8), 0.45);
+  let secondX = maybeNegative(randomInt(1, 8), 0.45);
+  let secondY = maybeNegative(randomInt(1, 8), 0.45);
+  while (Math.abs(firstX) === Math.abs(secondX) && Math.abs(firstY) === Math.abs(secondY)) {
+    secondX = maybeNegative(randomInt(1, 8), 0.45);
+    secondY = maybeNegative(randomInt(1, 8), 0.45);
+  }
+  return {
+    first: {
+      x: firstX,
+      y: firstY,
+      constant: firstX * solutionX + firstY * solutionY
+    },
+    second: {
+      x: secondX,
+      y: secondY,
+      constant: secondX * solutionX + secondY * solutionY
+    }
+  };
+}
+
+function coefficientToLatex(coefficient, variable, isFirst = false) {
+  if (coefficient === 0) return "";
+  const sign = coefficient < 0 ? "-" : "+";
+  const absolute = Math.abs(coefficient);
+  const body = absolute === 1 ? variable : `${absolute}${variable}`;
+  if (isFirst) return coefficient < 0 ? `-${body}` : body;
+  return `${sign} ${body}`;
+}
+
+function equationToLatex(equation) {
+  return `${coefficientToLatex(equation.x, "x", true)} ${coefficientToLatex(equation.y, "y")} = ${equation.constant}`;
+}
+
+function fractionNumberToLatex(numerator, denominator) {
+  if (numerator === 0) return "0";
+  const sign = numerator < 0 ? "-" : "";
+  return `${sign}\\frac{${Math.abs(numerator)}}{${denominator}}`;
+}
+
+function fractionCoefficientToLatex(numerator, denominator, variable, isFirst = false) {
+  if (numerator === 0) return "";
+  const sign = numerator < 0 ? "-" : "+";
+  const absolute = Math.abs(numerator);
+  const body = absolute === denominator
+    ? variable
+    : `\\frac{${absolute}}{${denominator}}${variable}`;
+  if (isFirst) return numerator < 0 ? `-${body}` : body;
+  return `${sign} ${body}`;
+}
+
+function signedFractionTermToLatex(numerator, denominator, variable, isFirst = false) {
+  const sign = numerator < 0 ? "-" : "+";
+  const absolute = Math.abs(numerator);
+  const body = absolute === denominator
+    ? variable
+    : `\\frac{${absolute}}{${denominator}}${variable}`;
+  if (isFirst) return numerator < 0 ? `-${body}` : body;
+  return `${sign} ${body}`;
+}
+
+function fractionEquationPartsToLatex(parts) {
+  return `${signedFractionTermToLatex(parts.xNumerator, parts.xDenominator, "x", true)} ${signedFractionTermToLatex(parts.yNumerator, parts.yDenominator, "y")} = ${fractionNumberToLatex(parts.constantNumerator, parts.constantDenominator)}`;
+}
+
+function decimalNumber(value) {
+  return Number(value.toFixed(2)).toString();
+}
+
+function decimalCoefficientToLatex(value, variable, isFirst = false) {
+  if (value === 0) return "";
+  const sign = value < 0 ? "-" : "+";
+  const absolute = Math.abs(value);
+  const body = absolute === 1 ? variable : `${decimalNumber(absolute)}${variable}`;
+  if (isFirst) return value < 0 ? `-${body}` : body;
+  return `${sign} ${body}`;
+}
+
+function decimalEquationToLatex(equation, denominator) {
+  return `${decimalCoefficientToLatex(equation.x / denominator, "x", true)} ${decimalCoefficientToLatex(equation.y / denominator, "y")} = ${decimalNumber(equation.constant / denominator)}`;
+}
+
+function formatClearChoice(firstMultiplier, secondMultiplier, firstEquationLatex, secondEquationLatex, note = "") {
+  return `${formatMultiplierPair(firstMultiplier, secondMultiplier)}
+tex:①' ${firstEquationLatex}
+tex:②' ${secondEquationLatex}${note ? `\n${note}` : ""}`;
+}
+
 function formatSystemStepChoice(firstMultiplier, secondMultiplier, firstEquation, secondEquation, operationLabel, resultEquation) {
   return `${formatMultiplierPair(firstMultiplier, secondMultiplier)}
 ①' ${firstEquation}
@@ -454,19 +619,108 @@ function formatSystemStepChoice(firstMultiplier, secondMultiplier, firstEquation
 ${operationLabel}：${resultEquation}`;
 }
 
+function makeLinearSystemClearQuestion(kind) {
+  const system = makeBaseLinearSystem();
+  const denominator = kind === "fraction"
+    ? [2, 3, 4, 5][randomInt(0, 3)]
+    : [10, 100][randomInt(0, 1)];
+  if (kind === "fraction") {
+    return makeLinearSystemFractionClearQuestion(system);
+  }
+
+  const firstLatex = decimalEquationToLatex(system.first, denominator);
+  const secondLatex = equationToLatex(system.second);
+  const firstClearedLatex = equationToLatex(system.first);
+  const secondClearedLatex = equationToLatex(system.second);
+  const wrongFirstMultiplier = denominator === 2 ? 3 : denominator - 1;
+  const prompt = kind === "fraction"
+    ? "①の分数をなくして、整数の式になおす変形はどれ？"
+    : "①の小数をなくして、整数の式になおす変形はどれ？";
+  const answerText = formatClearChoice(denominator, 1, firstClearedLatex, secondClearedLatex);
+  const wrongSecondText = formatClearChoice(1, denominator, firstLatex, equationToLatex(scaledEquation(system.second.x, system.second.y, system.second.constant, denominator)));
+  const wrongMultiplierText = formatClearChoice(wrongFirstMultiplier, 1, equationToLatex(scaledEquation(system.first.x, system.first.y, system.first.constant, wrongFirstMultiplier / denominator)), secondClearedLatex);
+  const unchangedText = formatClearChoice(1, 1, firstLatex, secondClearedLatex);
+
+  return {
+    text: `${prompt} ① ${firstLatex} ② ${secondLatex}`,
+    html: formatLinearSystemLatexHtml(firstLatex, secondLatex, prompt),
+    answerText,
+    choices: makeTextChoices(answerText, [wrongSecondText, wrongMultiplierText, unchangedText]),
+    hint: kind === "fraction"
+      ? `①の分母が ${denominator} なので、①の両辺を ${denominator} 倍すると整数の式になります。`
+      : `①は小数の式なので、①の両辺を ${denominator} 倍すると整数の式になります。`,
+    compact: true,
+    textChoices: true,
+    htmlChoices: true
+  };
+}
+
+function makeLinearSystemFractionClearQuestion(system) {
+  const denominatorPairs = [
+    [2, 3],
+    [2, 5],
+    [3, 4],
+    [3, 5],
+    [4, 5],
+    [2, 3]
+  ];
+  const selectedPair = denominatorPairs[randomInt(0, denominatorPairs.length - 1)];
+  const xDenominator = selectedPair[0];
+  const yDenominator = selectedPair[1];
+  const commonDenominator = leastCommonMultiple(xDenominator, yDenominator);
+  const constantDenominator = Math.random() < 0.5 ? xDenominator : yDenominator;
+  const parts = {
+    xNumerator: system.first.x * xDenominator,
+    xDenominator,
+    yNumerator: system.first.y * yDenominator,
+    yDenominator,
+    constantNumerator: system.first.constant * constantDenominator,
+    constantDenominator
+  };
+  const firstLatex = fractionEquationPartsToLatex(parts);
+  const secondLatex = equationToLatex(system.second);
+  const firstClearedLatex = equationToLatex(scaledEquation(
+    parts.xNumerator / parts.xDenominator,
+    parts.yNumerator / parts.yDenominator,
+    parts.constantNumerator / parts.constantDenominator,
+    commonDenominator
+  ));
+  const secondClearedLatex = equationToLatex(system.second);
+  const wrongXOnlyLatex = `${system.first.x * xDenominator}x ${formatCoefficient(system.first.y, "y")} = ${system.first.constant}`;
+  const wrongYOnlyLatex = `${formatCoefficient(system.first.x, "x", true)} ${formatCoefficient(system.first.y * yDenominator, "y")} = ${system.first.constant}`;
+  const wrongNoConstantLatex = formatLinearEquation(
+    system.first.x * commonDenominator,
+    system.first.y * commonDenominator,
+    system.first.constant
+  );
+  const answerText = formatClearChoice(commonDenominator, 1, firstClearedLatex, secondClearedLatex);
+  const xOnlyText = formatClearChoice(commonDenominator, 1, wrongXOnlyLatex, secondClearedLatex, "xの項だけにかけてしまった");
+  const yOnlyText = formatClearChoice(commonDenominator, 1, wrongYOnlyLatex, secondClearedLatex, "yの項だけにかけてしまった");
+  const noConstantText = formatClearChoice(commonDenominator, 1, wrongNoConstantLatex, secondClearedLatex, "右辺にかけ忘れている");
+
+  return {
+    text: `①の分数をなくして、整数の式になおす変形はどれ？ ① ${firstLatex} ② ${secondLatex}`,
+    html: formatLinearSystemLatexHtml(firstLatex, secondLatex, "①の分数をなくして、整数の式になおす変形はどれ？"),
+    answerText,
+    choices: makeTextChoices(answerText, [xOnlyText, yOnlyText, noConstantText]),
+    hint: `分母は ${xDenominator} と ${yDenominator} です。最小公倍数の ${commonDenominator} を①の両辺全体にかけます。右辺にも必ずかけます。`,
+    compact: true,
+    textChoices: true,
+    htmlChoices: true
+  };
+}
+
 function makeLinearSystemStepQuestion() {
   const target = Math.random() < 0.5 ? "x" : "y";
-  const solutionX = randomInt(-4, 5) || 2;
-  const solutionY = randomInt(-4, 5) || -3;
-  let firstX = randomInt(2, 5);
-  let secondX = randomInt(2, 5);
-  let firstY = randomInt(2, 5);
-  let secondY = randomInt(2, 5);
+  const solutionX = randomNonZeroInt(-6, 6);
+  const solutionY = randomNonZeroInt(-6, 6);
+  let firstX = maybeNegative(randomInt(1, 8), 0.3);
+  let secondX = maybeNegative(randomInt(1, 8), 0.45);
+  let firstY = maybeNegative(randomInt(1, 8), 0.35);
+  let secondY = maybeNegative(randomInt(1, 8), 0.45);
 
-  while (target === "x" && firstX === secondX) secondX = randomInt(2, 5);
-  while (target === "y" && firstY === secondY) secondY = randomInt(2, 5);
-  if (Math.random() < 0.45) secondX *= -1;
-  if (Math.random() < 0.45) secondY *= -1;
+  while (target === "x" && Math.abs(firstX) === Math.abs(secondX)) secondX = maybeNegative(randomInt(1, 8), 0.45);
+  while (target === "y" && Math.abs(firstY) === Math.abs(secondY)) secondY = maybeNegative(randomInt(1, 8), 0.45);
 
   const firstConstant = firstX * solutionX + firstY * solutionY;
   const secondConstant = secondX * solutionX + secondY * solutionY;
@@ -529,6 +783,19 @@ function makeLinearSystemStepQuestion() {
     compact: true,
     textChoices: true
   };
+}
+
+function makeLinearSystemQuestion() {
+  const makers = {
+    integer: makeLinearSystemStepQuestion,
+    fraction: () => makeLinearSystemClearQuestion("fraction"),
+    decimal: () => makeLinearSystemClearQuestion("decimal")
+  };
+  const selectedTypes = state.selectedLinearTypes.length
+    ? state.selectedLinearTypes
+    : ["integer"];
+  const type = selectedTypes[randomInt(0, selectedTypes.length - 1)];
+  return makers[type]();
 }
 
 function simplifyRadicand(n) {
@@ -598,7 +865,7 @@ function escapeHtml(value) {
 }
 
 function rootMathMl(radicand) {
-  return `<math class="math-inline"><msqrt><mn>${escapeHtml(radicand)}</mn></msqrt></math>`;
+  return `<span class="root-expression"><span class="root-symbol">&radic;</span><span class="root-radicand">${escapeHtml(radicand)}</span></span>`;
 }
 
 function renderLatex(tex) {
@@ -610,6 +877,42 @@ function renderLatex(tex) {
     });
   }
   return null;
+}
+
+function inlineLatex(tex) {
+  return renderLatex(tex) || escapeHtml(tex);
+}
+
+function formatLinearSystemLatexHtml(firstLatex, secondLatex, prompt) {
+  return `
+    <div class="system-question">
+      <p>${escapeHtml(prompt)}</p>
+      <div class="linear-system" aria-label="連立方程式">
+        <span class="system-brace">{</span>
+        <span class="system-equation">${inlineLatex(firstLatex)}</span>
+        <span class="system-number">・・・①</span>
+        <span class="system-equation">${inlineLatex(secondLatex)}</span>
+        <span class="system-number">・・・②</span>
+      </div>
+    </div>
+  `;
+}
+
+function formatSystemChoiceHtml(value) {
+  return String(value)
+    .split("\n")
+    .map(line => {
+      if (line.startsWith("tex:")) {
+        const content = line.slice(4);
+        const separator = content.indexOf(" ");
+        if (separator > -1) {
+          return `${escapeHtml(content.slice(0, separator))} ${inlineLatex(content.slice(separator + 1))}`;
+        }
+        return inlineLatex(content);
+      }
+      return escapeHtml(line);
+    })
+    .join("<br>");
 }
 
 function termToLatex(value) {
@@ -655,6 +958,27 @@ function formatTerm(value) {
   return html;
 }
 
+function formatPlainRootTerm(value) {
+  const raw = String(value);
+  let html = "";
+  let lastIndex = 0;
+  for (const match of raw.matchAll(/(-?\d*)√(\d+)/g)) {
+    html += escapeHtml(raw.slice(lastIndex, match.index));
+    html += `${escapeHtml(match[1])}${rootMathMl(match[2])}`;
+    lastIndex = match.index + match[0].length;
+  }
+  html += escapeHtml(raw.slice(lastIndex));
+  return html;
+}
+
+function formatStackedFraction(numerator, denominator) {
+  return `<span class="fraction-stack"><span class="fraction-top">${formatTerm(numerator)}</span><span class="fraction-bottom">${formatTerm(denominator)}</span></span>`;
+}
+
+function formatPlainRootFraction(numerator, denominator) {
+  return `<span class="fraction-stack"><span class="fraction-top">${formatPlainRootTerm(numerator)}</span><span class="fraction-bottom">${formatPlainRootTerm(denominator)}</span></span>`;
+}
+
 function formatMath(value) {
   const raw = String(value);
   const fractionPattern = /(\d*√\d+|\d+)\/(\d*√\d+|\d+)/g;
@@ -663,7 +987,7 @@ function formatMath(value) {
   for (const match of raw.matchAll(fractionPattern)) {
     html += formatTerm(raw.slice(lastIndex, match.index));
     const fractionLatex = `\\frac{${termToLatex(match[1])}}{${termToLatex(match[2])}}`;
-    html += renderLatex(fractionLatex) || `<math class="math-fraction"><mfrac><mrow>${termToMathMl(match[1])}</mrow><mrow>${termToMathMl(match[2])}</mrow></mfrac></math>`;
+    html += renderLatex(fractionLatex) || formatStackedFraction(match[1], match[2]);
     lastIndex = match.index + match[0].length;
   }
   html += formatTerm(raw.slice(lastIndex));
@@ -674,10 +998,24 @@ function formatChoice(value) {
   return formatMath(value).replaceAll("\n", "<br>");
 }
 
+function formatAnswerChoice(value) {
+  const raw = String(value);
+  const fractionPattern = /(\d*√\d+|\d+)\/(\d*√\d+|\d+)/g;
+  let html = "";
+  let lastIndex = 0;
+  for (const match of raw.matchAll(fractionPattern)) {
+    html += formatPlainRootTerm(raw.slice(lastIndex, match.index));
+    html += formatPlainRootFraction(match[1], match[2]);
+    lastIndex = match.index + match[0].length;
+  }
+  html += formatPlainRootTerm(raw.slice(lastIndex));
+  return html.replaceAll("\n", "<br>");
+}
+
 function makeRadicalTransformQuestion() {
-  const bases = [2, 3, 5, 6, 7];
-  const base = bases[randomInt(0, bases.length - 1)];
-  const multiplier = randomInt(2, 5);
+  const bases = [2, 3, 5, 6, 7, 10, 11, 13];
+  const base = randomChoice(bases);
+  const multiplier = randomInt(2, 8);
   const radicand = base * multiplier * multiplier;
   const simplified = simplifyRadicand(radicand);
   return {
@@ -694,9 +1032,14 @@ function makeRadicalRationalizeQuestion() {
     { numerator: 4, radicand: 2 },
     { numerator: 3, radicand: 3 },
     { numerator: 6, radicand: 3 },
-    { numerator: 5, radicand: 5 },
-    { numerator: 3, radicand: 6 },
-    { numerator: 6, radicand: 6 }
+      { numerator: 5, radicand: 5 },
+      { numerator: 3, radicand: 6 },
+      { numerator: 6, radicand: 6 },
+      { numerator: 7, radicand: 2 },
+      { numerator: 8, radicand: 3 },
+      { numerator: 9, radicand: 5 },
+      { numerator: 10, radicand: 7 },
+      { numerator: 4, radicand: 10 }
   ];
   const selectedCase = rationalizeCases[randomInt(0, rationalizeCases.length - 1)];
   const numerator = selectedCase.numerator;
@@ -713,12 +1056,12 @@ function makeRadicalRationalizeQuestion() {
 }
 
 function makeRadicalArithmeticQuestion() {
-  const bases = [2, 3, 5, 6, 7];
+  const bases = [2, 3, 5, 6, 7, 10, 11, 13];
   const type = randomInt(1, 4);
 
   if (type === 1 || type === 2) {
-    const base = bases[randomInt(0, bases.length - 1)];
-    const a = randomInt(2, 6);
+    const base = randomChoice(bases);
+    const a = randomInt(2, 9);
     const b = randomInt(1, a - 1);
     const op = type === 1 ? "+" : "-";
     const answerCoefficient = op === "+" ? a + b : a - b;
@@ -730,8 +1073,9 @@ function makeRadicalArithmeticQuestion() {
   }
 
   if (type === 3) {
-    const left = bases[randomInt(0, bases.length - 1)];
-    const right = bases[randomInt(0, bases.length - 1)];
+    const left = randomChoice(bases);
+    let right = randomChoice(bases);
+    while (right === left) right = randomChoice(bases);
     const product = left * right;
     const simplified = simplifyRadicand(product);
     return {
@@ -741,8 +1085,9 @@ function makeRadicalArithmeticQuestion() {
     };
   }
 
-  const numerator = bases[randomInt(0, bases.length - 1)];
-  const denominator = bases[randomInt(0, bases.length - 1)];
+  const numerator = randomChoice(bases);
+  let denominator = randomChoice(bases);
+  while (denominator === numerator) denominator = randomChoice(bases);
   const answer = radicalQuotientText(numerator, denominator);
   return {
     text: `計算せよ：√${numerator} ÷ √${denominator}`,
@@ -772,12 +1117,38 @@ function makeChoices(answer) {
 
 function makeRadicalChoices(answerText) {
   const choices = new Set([answerText]);
-  const samples = [
+  const radicalMatch = String(answerText).match(/^(-?\d*)√(\d+)(?:\/(\d+))?$/);
+  const radicands = [2, 3, 5, 6, 7, 10, 11, 13];
+  const samples = [];
+
+  if (radicalMatch) {
+    const coefficientText = radicalMatch[1];
+    const coefficient = coefficientText === "" ? 1 : coefficientText === "-" ? -1 : Number(coefficientText);
+    const radicand = Number(radicalMatch[2]);
+    const denominator = radicalMatch[3] ? Number(radicalMatch[3]) : 1;
+    const coefficientCandidates = [
+      coefficient + 1,
+      coefficient - 1,
+      -coefficient,
+      coefficient === 1 ? 2 : 1
+    ].filter(value => value !== 0);
+    coefficientCandidates.forEach(value => {
+      const term = radicalText(value, radicand);
+      samples.push(denominator === 1 ? term : `${term}/${denominator}`);
+    });
+    samples.push(radicalText(coefficient, randomChoice(radicands.filter(value => value !== radicand))));
+    if (denominator !== 1) {
+      samples.push(radicalText(coefficient, radicand));
+      samples.push(`${radicalText(coefficient, radicand)}/${denominator + 1}`);
+    }
+  }
+
+  samples.push(
     "√2", "2√2", "3√2", "√3", "2√3", "3√3",
     "√5", "2√5", "3√5", "√6", "2√6", "√7", "2√7",
-    "√2/2", "2√3/3", "3√5/5", "5√7/7",
-    "√2", "2√2", "√5", "6"
-  ];
+    "√10", "2√10", "√11", "3√11", "√13", "2√13",
+    "√2/2", "2√3/3", "3√5/5", "5√7/7"
+  );
   while (choices.size < 4) {
     choices.add(samples[randomInt(0, samples.length - 1)]);
   }
@@ -793,9 +1164,29 @@ function buildQuestion(unit) {
 }
 
 function renderHome() {
-  unitBoard.innerHTML = units.map(group => `
+  gradeBoard.innerHTML = units.map((group, index) => `
+    <button class="unit-card grade-card" type="button" data-grade-index="${index}">
+      <strong>中${index + 1}</strong>
+      <span>${group.grade.replace(/^中学\d年：/, "")}</span>
+      <small>${group.items.length}単元</small>
+    </button>
+  `).join("");
+
+  gradeBoard.querySelectorAll(".grade-card").forEach(button => {
+    button.addEventListener("click", () => {
+      state.selectedGradeIndex = Number(button.dataset.gradeIndex);
+      renderUnitSelect(state.selectedGradeIndex);
+      show("unit");
+    });
+  });
+}
+
+function renderUnitSelect(gradeIndex) {
+  const group = units[gradeIndex];
+  state.selectedGradeIndex = gradeIndex;
+  gradeTitle.textContent = `${group.grade}の単元を選ぶ`;
+  unitBoard.innerHTML = `
     <section class="grade-section">
-      <h2 class="grade-title">${group.grade}</h2>
       <div class="unit-grid">
         ${group.items.map(unit => `
           <button class="unit-card" type="button" data-unit="${unit.id}" ${unit.disabled ? "disabled" : ""}>
@@ -805,13 +1196,16 @@ function renderHome() {
         `).join("")}
       </div>
     </section>
-  `).join("");
+  `;
 
   unitBoard.querySelectorAll(".unit-card:not([disabled])").forEach(button => {
     button.addEventListener("click", () => {
-      const unit = units.flatMap(group => group.items.map(item => ({ ...item, grade: group.grade })))
+      const unit = group.items
+        .map(item => ({ ...item, grade: group.grade }))
         .find(item => item.id === button.dataset.unit);
-      if (unit.id === "radical") {
+      if (unit.id === "linear-system-align") {
+        openLinearSetup(unit);
+      } else if (unit.id === "radical") {
         openRadicalSetup(unit);
       } else {
         startQuiz(unit);
@@ -820,8 +1214,15 @@ function renderHome() {
   });
 }
 
+function showSelectedUnitList() {
+  renderUnitSelect(state.selectedGradeIndex);
+  show("unit");
+}
+
 function show(view) {
   homeView.classList.toggle("hidden", view !== "home");
+  unitView.classList.toggle("hidden", view !== "unit");
+  linearSetupView.classList.toggle("hidden", view !== "linearSetup");
   radicalSetupView.classList.toggle("hidden", view !== "radicalSetup");
   quizView.classList.toggle("hidden", view !== "quiz");
   resultView.classList.toggle("hidden", view !== "result");
@@ -834,11 +1235,39 @@ function getSelectedQuestionCount(inputs = questionCountInputs) {
 
 function setQuestionCount(value, sourceInputs = []) {
   state.questionCount = Number(value);
-  [...questionCountInputs, ...setupQuestionCountInputs].forEach(input => {
+  [...questionCountInputs, ...linearQuestionCountInputs, ...setupQuestionCountInputs].forEach(input => {
     if (!sourceInputs.includes(input)) {
       input.checked = Number(input.value) === state.questionCount;
     }
   });
+}
+
+function openLinearSetup(unit) {
+  state.selectedUnit = unit;
+  setQuestionCount(getSelectedQuestionCount());
+  show("linearSetup");
+  updateLinearStartState();
+}
+
+function getSelectedLinearTypes() {
+  return linearTypeInputs
+    .filter(input => input.checked)
+    .map(input => input.value);
+}
+
+function updateLinearStartState() {
+  const selectedTypes = getSelectedLinearTypes();
+  const hasSelection = selectedTypes.length > 0;
+  startLinearButton.disabled = !hasSelection;
+  linearSetupNote.textContent = hasSelection
+    ? "複数選ぶと、選んだ形式からランダムに出題します。"
+    : "少なくとも1つ選んでください。";
+}
+
+function startLinearQuiz() {
+  state.selectedLinearTypes = getSelectedLinearTypes();
+  setQuestionCount(getSelectedQuestionCount(linearQuestionCountInputs), linearQuestionCountInputs);
+  startQuiz(state.selectedUnit);
 }
 
 function openRadicalSetup(unit) {
@@ -877,6 +1306,7 @@ function startQuiz(unit) {
   state.correct = 0;
   state.history = [];
   state.locked = false;
+  state.missedCurrent = false;
   unitLabel.textContent = `${unit.grade}・${unit.title}`;
   quizTitle.textContent = `${unit.title} ${state.questionCount}問チャレンジ`;
   show("quiz");
@@ -886,6 +1316,8 @@ function startQuiz(unit) {
 function renderQuestion() {
   const q = state.questions[state.index];
   state.locked = false;
+  answerStamp.classList.remove("show");
+  nextButton.classList.add("hidden");
   questionText.classList.toggle("compact", !!q.compact);
   choiceList.classList.toggle("text-choices", !!q.textChoices);
   questionText.innerHTML = q.html || formatMath(q.text);
@@ -894,7 +1326,7 @@ function renderQuestion() {
   feedback.className = "feedback";
   feedback.textContent = "答えを選んでください。";
   choiceList.innerHTML = q.choices.map(choice => `
-    <button class="choice-button" type="button" data-choice="${escapeHtml(choice)}">${formatChoice(choice)}</button>
+    <button class="choice-button" type="button" data-choice="${escapeHtml(choice)}">${q.htmlChoices ? formatSystemChoiceHtml(choice) : formatChoice(choice)}</button>
   `).join("");
 
   choiceList.querySelectorAll(".choice-button").forEach(button => {
@@ -908,7 +1340,7 @@ function answerQuestion(choice, button) {
   const q = state.questions[state.index];
   const correctAnswer = q.answerText || String(q.answer);
   const ok = choice === correctAnswer;
-  if (ok) state.correct += 1;
+  if (ok && !state.missedCurrent) state.correct += 1;
 
   choiceList.querySelectorAll(".choice-button").forEach(choiceButton => {
     const value = choiceButton.dataset.choice;
@@ -918,24 +1350,39 @@ function answerQuestion(choice, button) {
   if (!ok) button.classList.add("wrong");
 
   feedback.className = `feedback ${ok ? "correct" : "wrong"}`;
-  feedback.innerHTML = ok ? "正解です。次へ進みます。" : `答えは ${formatMath(correctAnswer)}。${formatMath(q.hint)}`;
+  const correctHtml = q.htmlChoices ? formatSystemChoiceHtml(correctAnswer) : formatMath(correctAnswer);
+  feedback.innerHTML = ok
+    ? (state.missedCurrent ? "正解です。次へ進みます。この問題は最初に間違えたので、正解数には入りません。" : "正解です。次へ進みます。")
+    : `答えは ${correctHtml}。${formatMath(q.hint)}もう一度、同じ問題に挑戦しましょう。`;
+  if (ok) {
+    answerStamp.classList.remove("show");
+    window.requestAnimationFrame(() => {
+      answerStamp.classList.add("show");
+    });
 
-  state.history.push({
-    text: q.text,
-    answer: correctAnswer,
-    choice,
-    ok
-  });
+    state.history.push({
+      text: q.text,
+      answer: correctAnswer,
+      choice,
+      ok: !state.missedCurrent,
+      retried: state.missedCurrent
+    });
 
-  setTimeout(() => {
-    state.index += 1;
-    if (state.index >= state.questionCount) {
-      progressFill.style.width = "100%";
-      showResult();
-    } else {
-      renderQuestion();
-    }
-  }, ok ? 650 : 1300);
+    setTimeout(() => {
+      state.index += 1;
+      state.missedCurrent = false;
+      if (state.index >= state.questionCount) {
+        progressFill.style.width = "100%";
+        showResult();
+      } else {
+        renderQuestion();
+      }
+    }, 650);
+    return;
+  }
+
+  state.missedCurrent = true;
+  nextButton.classList.remove("hidden");
 }
 
 function showResult() {
@@ -954,22 +1401,33 @@ function showResult() {
   historyList.innerHTML = state.history.map(item => {
     const mark = item.ok ? "○" : "×";
     const className = item.ok ? "ok" : "ng";
-    return `<li class="${className}">${mark} ${formatMath(item.text)} = ${formatMath(item.answer)}　選択：${formatMath(item.choice)}</li>`;
+    const retryLabel = item.retried ? "（やり直し正解）" : "";
+    return `<li class="${className}">${mark} ${formatMath(item.text)} = ${formatMath(item.answer)}　選択：${formatMath(item.choice)}${retryLabel}</li>`;
   }).join("");
 
   show("result");
 }
 
 retryButton.addEventListener("click", () => startQuiz(state.selectedUnit));
-homeButton.addEventListener("click", () => show("home"));
-backHomeButton.addEventListener("click", () => show("home"));
-setupBackButton.addEventListener("click", () => show("home"));
+homeButton.addEventListener("click", showSelectedUnitList);
+backHomeButton.addEventListener("click", showSelectedUnitList);
+backGradeButton.addEventListener("click", () => show("home"));
+nextButton.addEventListener("click", renderQuestion);
+linearSetupBackButton.addEventListener("click", () => show("unit"));
+startLinearButton.addEventListener("click", startLinearQuiz);
+setupBackButton.addEventListener("click", () => show("unit"));
 startRadicalButton.addEventListener("click", startRadicalQuiz);
+linearTypeInputs.forEach(input => {
+  input.addEventListener("change", updateLinearStartState);
+});
 radicalTypeInputs.forEach(input => {
   input.addEventListener("change", updateRadicalStartState);
 });
 questionCountInputs.forEach(input => {
   input.addEventListener("change", () => setQuestionCount(getSelectedQuestionCount(), questionCountInputs));
+});
+linearQuestionCountInputs.forEach(input => {
+  input.addEventListener("change", () => setQuestionCount(getSelectedQuestionCount(linearQuestionCountInputs), linearQuestionCountInputs));
 });
 setupQuestionCountInputs.forEach(input => {
   input.addEventListener("change", () => setQuestionCount(getSelectedQuestionCount(setupQuestionCountInputs), setupQuestionCountInputs));
