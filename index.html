@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>数学クエスト</title>
+  <title>数学</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -11,9 +11,20 @@
   <main class="app-shell">
     <section class="hero-panel" id="homeView" aria-label="ホーム">
       <header class="hero-head">
-        <p class="eyebrow">Math Quest</p>
-        <h1>単元を選んでチャレンジ</h1>
-        <p class="lead">問題数と単元を選ぶと、4択の問題が出ます。答えたらすぐ次の問題へ進みます。</p>
+        <p class="eyebrow">数学</p>
+        <h1>学年を選んでチャレンジ</h1>
+        <p class="lead">まず中1・中2・中3を選びます。そのあと、その学年の単元を選んで問題を始めます。</p>
+      </header>
+
+      <section class="grade-board" id="gradeBoard" aria-label="学年選択"></section>
+    </section>
+
+    <section class="hero-panel hidden" id="unitView" aria-label="単元選択">
+      <header class="hero-head">
+        <button class="text-button" type="button" id="backGradeButton">← 学年を選び直す</button>
+        <p class="eyebrow">数学</p>
+        <h1 id="gradeTitle">単元を選ぶ</h1>
+        <p class="lead">問題数と単元を選んで、チャレンジを始めます。</p>
       </header>
 
       <section class="count-panel" aria-label="問題数">
@@ -33,10 +44,64 @@
       <section class="unit-board" id="unitBoard" aria-label="単元選択"></section>
     </section>
 
+    <section class="setup-panel hidden" id="linearSetupView" aria-label="連立方程式の問題設定">
+      <header class="quiz-top">
+        <div>
+          <button class="text-button" type="button" id="linearSetupBackButton">← 単元選択へ戻る</button>
+          <p class="eyebrow">中学2年・連立方程式</p>
+          <h1>問題に混ぜる形を選ぶ</h1>
+          <p class="lead">整数だけで練習するか、分数や小数を混ぜるかを選んでから始めます。</p>
+        </div>
+      </header>
+
+      <section class="count-panel compact" aria-label="問題数">
+        <p class="count-label">問題数</p>
+        <div class="segmented-control">
+          <label>
+            <input type="radio" name="linearQuestionCount" value="10" checked>
+            <span>10問</span>
+          </label>
+          <label>
+            <input type="radio" name="linearQuestionCount" value="20">
+            <span>20問</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="setup-options" aria-label="連立方程式の形式">
+        <label class="setup-option">
+          <input type="checkbox" name="linearType" value="integer" checked>
+          <span>
+            <strong>整数</strong>
+            <small>係数合わせから消去後の式まで確認</small>
+          </span>
+        </label>
+        <label class="setup-option">
+          <input type="checkbox" name="linearType" value="fraction">
+          <span>
+            <strong>分数</strong>
+            <small>分数を整数になおす変形を確認</small>
+          </span>
+        </label>
+        <label class="setup-option">
+          <input type="checkbox" name="linearType" value="decimal">
+          <span>
+            <strong>小数</strong>
+            <small>小数を整数になおす変形を確認</small>
+          </span>
+        </label>
+      </section>
+
+      <div class="setup-actions">
+        <button class="primary-button" type="button" id="startLinearButton">開始</button>
+        <p class="setup-note" id="linearSetupNote">複数選ぶと、選んだ形式からランダムに出題します。</p>
+      </div>
+    </section>
+
     <section class="setup-panel hidden" id="radicalSetupView" aria-label="根号の問題設定">
       <header class="quiz-top">
         <div>
-          <button class="text-button" type="button" id="setupBackButton">← ホーム</button>
+          <button class="text-button" type="button" id="setupBackButton">← 単元選択へ戻る</button>
           <p class="eyebrow">中学3年・根号の計算</p>
           <h1>問題の種類を選ぶ</h1>
           <p class="lead">練習したい内容を1つ以上選んでから、チャレンジを始めます。</p>
@@ -90,7 +155,7 @@
     <section class="quiz-panel hidden" id="quizView" aria-label="クイズ">
       <header class="quiz-top">
         <div>
-          <button class="text-button" type="button" id="backHomeButton">← ホーム</button>
+          <button class="text-button" type="button" id="backHomeButton">← 単元選択へ戻る</button>
           <p class="eyebrow" id="unitLabel">中1 / 正負の計算</p>
           <h1 id="quizTitle">10問チャレンジ</h1>
         </div>
@@ -106,6 +171,8 @@
         <div class="question" id="questionText"></div>
         <div class="choices" id="choiceList" aria-label="選択肢"></div>
         <div class="feedback" id="feedback" role="status" aria-live="polite">答えを選んでください。</div>
+        <button class="next-button hidden" type="button" id="nextButton">次へ</button>
+        <div class="answer-stamp" id="answerStamp" aria-hidden="true">○</div>
       </section>
     </section>
 
