@@ -865,7 +865,7 @@ function escapeHtml(value) {
 }
 
 function rootMathMl(radicand) {
-  return `<span class="root-expression"><span class="root-symbol">&radic;</span><span class="root-radicand">${escapeHtml(radicand)}</span></span>`;
+  return `<span class="root-expression" aria-label="ルート${escapeHtml(radicand)}"><span class="root-symbol">√</span><span class="root-radicand">${escapeHtml(radicand)}</span></span>`;
 }
 
 function renderLatex(tex) {
@@ -994,13 +994,9 @@ function formatMath(value) {
   return html;
 }
 
-function formatChoice(value) {
-  return formatMath(value).replaceAll("\n", "<br>");
-}
-
 function formatAnswerChoice(value) {
   const raw = String(value);
-  const fractionPattern = /(\d*√\d+|\d+)\/(\d*√\d+|\d+)/g;
+  const fractionPattern = /(-?\d*√\d+|-?\d+)\/(-?\d*√\d+|-?\d+)/g;
   let html = "";
   let lastIndex = 0;
   for (const match of raw.matchAll(fractionPattern)) {
@@ -1010,6 +1006,12 @@ function formatAnswerChoice(value) {
   }
   html += formatPlainRootTerm(raw.slice(lastIndex));
   return html.replaceAll("\n", "<br>");
+}
+
+function formatChoice(value) {
+  const raw = String(value);
+  if (raw.includes("√")) return formatAnswerChoice(raw);
+  return formatMath(raw).replaceAll("\n", "<br>");
 }
 
 function makeRadicalTransformQuestion() {
