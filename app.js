@@ -70,6 +70,7 @@ const homeView = document.querySelector("#homeView");
 const unitView = document.querySelector("#unitView");
 const linearSetupView = document.querySelector("#linearSetupView");
 const radicalSetupView = document.querySelector("#radicalSetupView");
+const readyView = document.querySelector("#readyView");
 const quizView = document.querySelector("#quizView");
 const resultView = document.querySelector("#resultView");
 const gradeBoard = document.querySelector("#gradeBoard");
@@ -94,6 +95,12 @@ const retryButton = document.querySelector("#retryButton");
 const homeButton = document.querySelector("#homeButton");
 const backHomeButton = document.querySelector("#backHomeButton");
 const backGradeButton = document.querySelector("#backGradeButton");
+const readyBackButton = document.querySelector("#readyBackButton");
+const readyStartButton = document.querySelector("#readyStartButton");
+const readyHomeButton = document.querySelector("#readyHomeButton");
+const readyText = document.querySelector("#readyText");
+const readyUnitValue = document.querySelector("#readyUnitValue");
+const readyCountValue = document.querySelector("#readyCountValue");
 const setupBackButton = document.querySelector("#setupBackButton");
 const linearSetupBackButton = document.querySelector("#linearSetupBackButton");
 const startLinearButton = document.querySelector("#startLinearButton");
@@ -1210,7 +1217,7 @@ function renderUnitSelect(gradeIndex) {
       } else if (unit.id === "radical") {
         openRadicalSetup(unit);
       } else {
-        startQuiz(unit);
+        openReady(unit);
       }
     });
   });
@@ -1226,6 +1233,7 @@ function show(view) {
   unitView.classList.toggle("hidden", view !== "unit");
   linearSetupView.classList.toggle("hidden", view !== "linearSetup");
   radicalSetupView.classList.toggle("hidden", view !== "radicalSetup");
+  readyView.classList.toggle("hidden", view !== "ready");
   quizView.classList.toggle("hidden", view !== "quiz");
   resultView.classList.toggle("hidden", view !== "result");
 }
@@ -1269,7 +1277,7 @@ function updateLinearStartState() {
 function startLinearQuiz() {
   state.selectedLinearTypes = getSelectedLinearTypes();
   setQuestionCount(getSelectedQuestionCount(linearQuestionCountInputs), linearQuestionCountInputs);
-  startQuiz(state.selectedUnit);
+  openReady(state.selectedUnit);
 }
 
 function openRadicalSetup(unit) {
@@ -1297,7 +1305,15 @@ function updateRadicalStartState() {
 function startRadicalQuiz() {
   state.selectedRadicalTypes = getSelectedRadicalTypes();
   setQuestionCount(getSelectedQuestionCount(setupQuestionCountInputs), setupQuestionCountInputs);
-  startQuiz(state.selectedUnit);
+  openReady(state.selectedUnit);
+}
+
+function openReady(unit) {
+  state.selectedUnit = unit;
+  readyUnitValue.textContent = unit.title;
+  readyCountValue.textContent = `${state.questionCount}問`;
+  readyText.textContent = `${unit.grade}・${unit.title}を${state.questionCount}問解きます。スタートを押すと始まります。`;
+  show("ready");
 }
 
 function startQuiz(unit) {
@@ -1414,6 +1430,9 @@ retryButton.addEventListener("click", () => startQuiz(state.selectedUnit));
 homeButton.addEventListener("click", showSelectedUnitList);
 backHomeButton.addEventListener("click", showSelectedUnitList);
 backGradeButton.addEventListener("click", () => show("home"));
+readyBackButton.addEventListener("click", showSelectedUnitList);
+readyHomeButton.addEventListener("click", showSelectedUnitList);
+readyStartButton.addEventListener("click", () => startQuiz(state.selectedUnit));
 nextButton.addEventListener("click", renderQuestion);
 linearSetupBackButton.addEventListener("click", () => show("unit"));
 startLinearButton.addEventListener("click", startLinearQuiz);
