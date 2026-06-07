@@ -461,23 +461,23 @@ h1 {
   display: inline-block;
   min-width: 0.5em;
   font-family: "Cambria Math", "STIX Two Math", "Times New Roman", serif;
-  font-size: 1.26em;
-  line-height: 0.92;
-  transform: translateY(0.01em) scaleX(1.04);
+  font-size: 1.14em;
+  line-height: 0.96;
+  transform: translateY(0.02em) scaleX(1.02);
   overflow: visible;
 }
 
 .root-radicand {
   display: inline-block;
   margin-left: -0.04em;
-  padding: 0.08em 0.1em 0;
-  border-top: 0.075em solid currentColor;
+  padding: 0.06em 0.09em 0;
+  border-top: 0.065em solid currentColor;
   line-height: 0.98;
   overflow: visible;
 }
 
 .choice-button .root-expression {
-  font-size: 1.16em;
+  font-size: 1.02em;
 }
 
 .fraction-stack {
