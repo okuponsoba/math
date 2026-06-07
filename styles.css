@@ -7,8 +7,8 @@
   --green: #0284c7;
   --rose: #dc2626;
   --gold: #f59e0b;
-  --panel: rgba(255, 251, 235, 0.56);
-  --white: rgba(255, 251, 235, 0.72);
+  --panel: rgba(255, 251, 235, 0.38);
+  --white: rgba(255, 251, 235, 0.5);
 }
 
 * {
@@ -73,10 +73,10 @@ button {
   border: 1px solid rgba(180, 83, 9, 0.28);
   border-radius: 24px;
   background:
-    linear-gradient(180deg, rgba(255, 251, 235, 0.72), rgba(248, 250, 252, 0.62)),
-    radial-gradient(circle at top, rgba(250, 204, 21, 0.12), transparent 22rem);
+    linear-gradient(180deg, rgba(255, 251, 235, 0.46), rgba(248, 250, 252, 0.34)),
+    radial-gradient(circle at top, rgba(250, 204, 21, 0.08), transparent 22rem);
   box-shadow: 0 30px 90px rgba(17, 24, 39, 0.32), inset 0 0 0 1px rgba(255, 255, 255, 0.62);
-  backdrop-filter: blur(8px) saturate(1.15);
+  backdrop-filter: blur(3px) saturate(1.12);
   padding: 24px;
 }
 
@@ -111,6 +111,11 @@ h1 {
   letter-spacing: 0;
 }
 
+#quizTitle {
+  font-size: clamp(24px, 4vw, 38px);
+  line-height: 1.12;
+}
+
 .lead {
   margin: 14px 0 0;
   color: var(--muted);
@@ -128,8 +133,8 @@ h1 {
   padding: 14px;
   border: 1px solid rgba(146, 64, 14, 0.24);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.52);
-  backdrop-filter: blur(6px);
+  background: rgba(255, 255, 255, 0.34);
+  backdrop-filter: blur(3px);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
@@ -256,10 +261,10 @@ h1 {
   padding: 16px;
   text-align: left;
   background:
-    linear-gradient(180deg, rgba(255, 251, 235, 0.72), rgba(255, 255, 255, 0.58));
+    linear-gradient(180deg, rgba(255, 251, 235, 0.42), rgba(255, 255, 255, 0.3));
   border: 1px solid rgba(146, 64, 14, 0.24);
   box-shadow: 0 12px 36px rgba(88, 28, 135, 0.10), inset 0 0 0 1px rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(3px);
   display: grid;
   align-content: space-between;
 }
@@ -309,9 +314,9 @@ h1 {
 .setup-option {
   min-height: 150px;
   padding: 16px;
-  background: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.34);
   border: 1px solid rgba(146, 64, 14, 0.24);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(3px);
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 12px;
@@ -375,7 +380,7 @@ h1 {
 .text-button {
   border: 1px solid rgba(146, 64, 14, 0.24);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.34);
   color: var(--ink);
   min-height: 36px;
   padding: 0 12px;
@@ -400,7 +405,7 @@ h1 {
   overflow: hidden;
   border: 1px solid rgba(146, 64, 14, 0.24);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.28);
   margin: 20px 0;
 }
 
@@ -519,7 +524,7 @@ h1 {
 .choice-button {
   min-height: 86px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.64);
+  background: rgba(255, 255, 255, 0.38);
   border: 1px solid rgba(146, 64, 14, 0.24);
   color: var(--ink);
   font-size: clamp(22px, 4vw, 34px);
@@ -527,7 +532,7 @@ h1 {
   line-height: 1.35;
   overflow: visible;
   box-shadow: 0 8px 22px rgba(15, 23, 42, 0.07);
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(3px);
 }
 
 .choices.text-choices .choice-button {
@@ -853,9 +858,9 @@ h1 {
 
 .secondary-button {
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.34);
   border: 1px solid rgba(146, 64, 14, 0.24);
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(3px);
 }
 
 @media (max-width: 760px) {
@@ -899,6 +904,11 @@ h1 {
   h1 {
     font-size: clamp(28px, 10vw, 42px);
     line-height: 1.12;
+  }
+
+  #quizTitle {
+    font-size: clamp(22px, 7vw, 30px);
+    line-height: 1.15;
   }
 
   .quiz-panel {
