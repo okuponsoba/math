@@ -1176,8 +1176,6 @@ function renderHome() {
   gradeBoard.innerHTML = units.map((group, index) => `
     <button class="unit-card grade-card" type="button" data-grade-index="${index}">
       <strong>中${index + 1}</strong>
-      <span>${group.grade.replace(/^中学\d年：/, "")}</span>
-      <small>${group.items.length}単元</small>
     </button>
   `).join("");
 
