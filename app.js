@@ -1329,6 +1329,23 @@ function startQuiz(unit) {
   renderQuestion();
 }
 
+function formatQuestionText(value) {
+  const raw = String(value);
+  const separators = ["：", ":"];
+  for (const separator of separators) {
+    const index = raw.indexOf(separator);
+    if (index > -1) {
+      const instruction = raw.slice(0, index + separator.length);
+      const expression = raw.slice(index + separator.length).trim();
+      return `
+        <span class="question-instruction">${escapeHtml(instruction)}</span>
+        <span class="question-expression">${formatMath(expression)}</span>
+      `;
+    }
+  }
+  return `<span class="question-expression">${formatMath(raw)}</span>`;
+}
+
 function renderQuestion() {
   const q = state.questions[state.index];
   state.locked = false;
@@ -1336,7 +1353,7 @@ function renderQuestion() {
   nextButton.classList.add("hidden");
   questionText.classList.toggle("compact", !!q.compact);
   choiceList.classList.toggle("text-choices", !!q.textChoices);
-  questionText.innerHTML = q.html || formatMath(q.text);
+  questionText.innerHTML = q.html || formatQuestionText(q.text);
   roundBadge.textContent = `${state.index + 1}問目`;
   progressFill.style.width = `${(state.index / state.questionCount) * 100}%`;
   feedback.className = "feedback";
