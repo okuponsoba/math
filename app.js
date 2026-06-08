@@ -22,8 +22,8 @@ const units = [
       },
       {
         id: "mixed",
-        title: "正負と累乗ミックス",
-        description: "正負の計算と累乗をまとめて練習",
+        title: "四則混合",
+        description: "項の数・括弧・累乗を選んで、計算の順番を練習",
         makeQuestion: makeMixedQuestion
       }
     ]
@@ -57,18 +57,25 @@ const state = {
   selectedGradeIndex: 0,
   selectedRadicalTypes: ["transform", "rationalize", "arithmetic"],
   selectedLinearTypes: ["integer"],
+  selectedMixedLevel: 1,
+  mixedOptions: {
+    parentheses: false,
+    powers: false
+  },
   questionCount: 10,
   questions: [],
   index: 0,
   correct: 0,
   history: [],
   locked: false,
-  missedCurrent: false
+  missedCurrent: false,
+  quizMode: "practice"
 };
 
 const homeView = document.querySelector("#homeView");
 const unitView = document.querySelector("#unitView");
 const linearSetupView = document.querySelector("#linearSetupView");
+const mixedSetupView = document.querySelector("#mixedSetupView");
 const radicalSetupView = document.querySelector("#radicalSetupView");
 const readyView = document.querySelector("#readyView");
 const quizView = document.querySelector("#quizView");
@@ -91,6 +98,7 @@ const correctValue = document.querySelector("#correctValue");
 const rateValue = document.querySelector("#rateValue");
 const scoreValue = document.querySelector("#scoreValue");
 const historyList = document.querySelector("#historyList");
+const testScoreList = document.querySelector("#testScoreList");
 const retryButton = document.querySelector("#retryButton");
 const homeButton = document.querySelector("#homeButton");
 const backHomeButton = document.querySelector("#backHomeButton");
@@ -103,15 +111,23 @@ const readyUnitValue = document.querySelector("#readyUnitValue");
 const readyCountValue = document.querySelector("#readyCountValue");
 const setupBackButton = document.querySelector("#setupBackButton");
 const linearSetupBackButton = document.querySelector("#linearSetupBackButton");
+const mixedSetupBackButton = document.querySelector("#mixedSetupBackButton");
 const startLinearButton = document.querySelector("#startLinearButton");
+const startMixedButton = document.querySelector("#startMixedButton");
 const startRadicalButton = document.querySelector("#startRadicalButton");
 const setupNote = document.querySelector("#setupNote");
 const linearSetupNote = document.querySelector("#linearSetupNote");
+const mixedSetupNote = document.querySelector("#mixedSetupNote");
 const linearTypeInputs = [...document.querySelectorAll('input[name="linearType"]')];
+const mixedLevelInputs = [...document.querySelectorAll('input[name="mixedLevel"]')];
+const mixedOptionInputs = [...document.querySelectorAll('input[name="mixedOption"]')];
 const radicalTypeInputs = [...document.querySelectorAll('input[name="radicalType"]')];
 const questionCountInputs = [...document.querySelectorAll('input[name="questionCount"]')];
 const linearQuestionCountInputs = [...document.querySelectorAll('input[name="linearQuestionCount"]')];
+const mixedQuestionCountInputs = [...document.querySelectorAll('input[name="mixedQuestionCount"]')];
 const setupQuestionCountInputs = [...document.querySelectorAll('input[name="setupQuestionCount"]')];
+const quizModeInputs = [...document.querySelectorAll('input[name="quizMode"]')];
+const TEST_SCORE_KEY = "mathAppTestScores";
 
 function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -125,6 +141,32 @@ function randomNonZeroInt(min, max) {
   let value = 0;
   while (value === 0) value = randomInt(min, max);
   return value;
+}
+
+function loadTestScores() {
+  try {
+    return JSON.parse(localStorage.getItem(TEST_SCORE_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveTestScore(record) {
+  try {
+    const scores = loadTestScores();
+    scores.unshift(record);
+    localStorage.setItem(TEST_SCORE_KEY, JSON.stringify(scores.slice(0, 20)));
+  } catch {
+    // 保存できない環境でもテスト自体は止めない。
+  }
+}
+
+function renderTestScores() {
+  if (!testScoreList) return;
+  const scores = loadTestScores();
+  testScoreList.innerHTML = scores.length
+    ? scores.map(score => `<li>${escapeHtml(score.date)}　${escapeHtml(score.unit)}　${score.correct}/${score.total}問　${score.rate}%</li>`).join("")
+    : "<li>まだテスト記録はありません。</li>";
 }
 
 function maybeNegative(value, chance = 0.5) {
@@ -455,8 +497,228 @@ function makePowerQuestion() {
   };
 }
 
+function mixedSuperscript(value) {
+  const map = { 2: "²", 3: "³" };
+  return map[value] || String(value);
+}
+
+function makeMixedTerm(usePower = false) {
+  if (usePower) {
+    const base = randomInt(2, 5);
+    const exponent = randomChoice([2, 3]);
+    const value = Math.pow(base, exponent);
+    return {
+      value,
+      display: `${base}${mixedSuperscript(exponent)}`
+    };
+  }
+
+  const value = randomInt(2, 12);
+  return {
+    value,
+    display: String(value)
+  };
+}
+
+function makePlainMixedTerm(value) {
+  return {
+    value,
+    display: String(value)
+  };
+}
+
+function shuffleItems(items) {
+  return [...items].sort(() => Math.random() - 0.5);
+}
+
+function makeMixedOperators(termCount) {
+  const operatorCount = termCount - 1;
+  const profiles = {
+    2: [
+      ["+", "×"], ["×", "+"], ["-", "×"], ["×", "-"],
+      ["+", "÷"], ["÷", "+"], ["-", "÷"], ["÷", "-"],
+      ["×", "÷"], ["÷", "×"]
+    ],
+    3: [
+      ["+", "-", "×"], ["+", "-", "÷"], ["+", "×", "÷"], ["-", "×", "÷"],
+      ["×", "+", "-"], ["÷", "+", "-"], ["×", "÷", "+"], ["×", "÷", "-"]
+    ],
+    4: [
+      ["+", "-", "×", "÷"], ["+", "×", "-", "÷"], ["-", "÷", "+", "×"],
+      ["×", "+", "÷", "-"], ["÷", "-", "×", "+"], ["+", "×", "×", "-"],
+      ["-", "÷", "+", "÷"], ["×", "-", "+", "×"]
+    ]
+  };
+  const base = randomChoice(profiles[operatorCount] || profiles[2]);
+  return shuffleItems(base).slice(0, operatorCount);
+}
+
+function avoidConsecutiveDivision(operators) {
+  return operators.map((operator, index) => {
+    if (operator === "÷" && operators[index - 1] === "÷") {
+      return randomChoice(["+", "-", "×"]);
+    }
+    return operator;
+  });
+}
+
+function tuneDivisionTerms(terms, operators) {
+  operators.forEach((operator, index) => {
+    if (operator !== "÷") return;
+    const divisor = randomChoice([2, 3, 4, 5, 6, 7, 8, 9]);
+    const quotient = randomInt(2, 12);
+    terms[index] = makePlainMixedTerm(divisor * quotient);
+    terms[index + 1] = makePlainMixedTerm(divisor);
+  });
+}
+
+function ensurePowerTerm(terms, operators) {
+  if (terms.some(term => /[²³]/.test(term.display))) return;
+  const divisionIndexes = new Set();
+  operators.forEach((operator, index) => {
+    if (operator === "÷") {
+      divisionIndexes.add(index);
+      divisionIndexes.add(index + 1);
+    }
+  });
+  const candidates = terms
+    .map((_, index) => index)
+    .filter(index => !divisionIndexes.has(index));
+  const index = candidates.length ? randomChoice(candidates) : randomInt(0, terms.length - 1);
+  terms[index] = makeMixedTerm(true);
+}
+
+function applyArithmetic(left, operator, right) {
+  if (operator === "+") return left + right;
+  if (operator === "-") return left - right;
+  if (operator === "×") return left * right;
+  return left / right;
+}
+
+function toJsOperator(operator) {
+  if (operator === "×") return "*";
+  if (operator === "÷") return "/";
+  return operator;
+}
+
+function evaluateFlatMixedExpression(values, operators) {
+  const workingValues = [...values];
+  const workingOperators = [...operators];
+
+  for (let index = 0; index < workingOperators.length;) {
+    const operator = workingOperators[index];
+    if (operator !== "×" && operator !== "÷") {
+      index += 1;
+      continue;
+    }
+
+    const left = workingValues[index];
+    const right = workingValues[index + 1];
+    const value = operator === "×" ? left * right : left / right;
+    if (!Number.isInteger(value)) return null;
+    workingValues.splice(index, 2, value);
+    workingOperators.splice(index, 1);
+  }
+
+  return workingOperators.reduce((total, operator, index) => {
+    return operator === "+" ? total + workingValues[index + 1] : total - workingValues[index + 1];
+  }, workingValues[0]);
+}
+
+function evaluateMixedExpression(terms, operators, parenthesizedIndex = -1) {
+  if (parenthesizedIndex > -1) {
+    const parenthesizedValue = evaluateFlatMixedExpression(
+      [terms[parenthesizedIndex].value, terms[parenthesizedIndex + 1].value],
+      [operators[parenthesizedIndex]]
+    );
+    if (parenthesizedValue === null) return null;
+
+    const values = terms.map(term => term.value);
+    const reducedOperators = [...operators];
+    values.splice(parenthesizedIndex, 2, parenthesizedValue);
+    reducedOperators.splice(parenthesizedIndex, 1);
+    return evaluateFlatMixedExpression(values, reducedOperators);
+  }
+
+  return evaluateFlatMixedExpression(terms.map(term => term.value), operators);
+}
+
+function evaluateLeftToRight(terms, operators) {
+  return operators.reduce((total, operator, index) => {
+    return applyArithmetic(total, operator, terms[index + 1].value);
+  }, terms[0].value);
+}
+
+function formatMixedExpression(terms, operators, parenthesizedIndex = -1) {
+  return terms.map((term, index) => {
+    let text = term.display;
+    if (parenthesizedIndex > -1 && index === parenthesizedIndex) text = `(${text}`;
+    if (parenthesizedIndex > -1 && index === parenthesizedIndex + 1) text = `${text})`;
+    if (index < operators.length) text += ` ${operators[index]} `;
+    return text;
+  }).join("");
+}
+
+function makeMixedChoices(answer, terms, operators) {
+  const leftToRight = evaluateLeftToRight(terms, operators);
+  const distractors = [
+    Number.isInteger(leftToRight) ? leftToRight : null,
+    -answer,
+    answer + randomChoice([-12, -6, -3, 3, 6, 12]),
+    answer + randomChoice([-8, -4, 4, 8])
+  ].filter(value => Number.isInteger(value) && value !== answer);
+  return makeIntegerChoices(answer, distractors);
+}
+
 function makeMixedQuestion() {
-  return Math.random() < 0.55 ? makeSignedQuestion() : makePowerQuestion();
+  const termCountByLevel = { 1: 3, 2: 4, 3: 5 };
+  const level = state.selectedMixedLevel || 1;
+  const termCount = termCountByLevel[level] || 3;
+  const includeParentheses = !!state.mixedOptions.parentheses;
+  const includePowers = !!state.mixedOptions.powers;
+  const wantsNegativeAnswer = Math.random() < 0.35;
+
+  for (let attempt = 0; attempt < 420; attempt += 1) {
+    const powerIndex = includePowers ? randomInt(0, termCount - 1) : -1;
+    const terms = Array.from({ length: termCount }, (_, index) => makeMixedTerm(index === powerIndex));
+    const operators = avoidConsecutiveDivision(makeMixedOperators(termCount));
+    tuneDivisionTerms(terms, operators);
+    if (includePowers) ensurePowerTerm(terms, operators);
+    const parenthesizedIndex = includeParentheses ? randomInt(0, termCount - 2) : -1;
+    const answer = evaluateMixedExpression(terms, operators, parenthesizedIndex);
+
+    if (
+      answer !== null &&
+      Number.isInteger(answer) &&
+      Math.abs(answer) <= 300 &&
+      (!wantsNegativeAnswer || answer < 0) &&
+      operators.some(operator => operator === "×" || operator === "÷")
+    ) {
+      const expression = formatMixedExpression(terms, operators, parenthesizedIndex);
+      return {
+        text: `計算せよ：${expression}`,
+        answer,
+        choices: makeMixedChoices(answer, terms, operators),
+        hint: "括弧、累乗、かけ算・割り算、足し算・引き算の順に計算します。"
+      };
+    }
+  }
+
+  if (wantsNegativeAnswer) {
+    return {
+      text: "計算せよ：3 - 4 × 2",
+      answer: -5,
+      choices: makeIntegerChoices(-5, [14, 2, 5]),
+      hint: "かけ算・割り算を先に計算してから、足し算・引き算をします。"
+    };
+  }
+
+  return {
+    text: "計算せよ：8 ÷ 2 + 3 × 4",
+    answer: 16,
+    choices: makeIntegerChoices(16, [28, 14, -16]),
+    hint: "かけ算・割り算を先に計算してから、足し算・引き算をします。"
+  };
 }
 
 function leastCommonMultiple(a, b) {
@@ -1212,6 +1474,8 @@ function renderUnitSelect(gradeIndex) {
         .find(item => item.id === button.dataset.unit);
       if (unit.id === "linear-system-align") {
         openLinearSetup(unit);
+      } else if (unit.id === "mixed") {
+        openMixedSetup(unit);
       } else if (unit.id === "radical") {
         openRadicalSetup(unit);
       } else {
@@ -1230,6 +1494,7 @@ function show(view) {
   homeView.classList.toggle("hidden", view !== "home");
   unitView.classList.toggle("hidden", view !== "unit");
   linearSetupView.classList.toggle("hidden", view !== "linearSetup");
+  mixedSetupView.classList.toggle("hidden", view !== "mixedSetup");
   radicalSetupView.classList.toggle("hidden", view !== "radicalSetup");
   readyView.classList.toggle("hidden", view !== "ready");
   quizView.classList.toggle("hidden", view !== "quiz");
@@ -1243,7 +1508,7 @@ function getSelectedQuestionCount(inputs = questionCountInputs) {
 
 function setQuestionCount(value, sourceInputs = []) {
   state.questionCount = Number(value);
-  [...questionCountInputs, ...linearQuestionCountInputs, ...setupQuestionCountInputs].forEach(input => {
+  [...questionCountInputs, ...linearQuestionCountInputs, ...mixedQuestionCountInputs, ...setupQuestionCountInputs].forEach(input => {
     if (!sourceInputs.includes(input)) {
       input.checked = Number(input.value) === state.questionCount;
     }
@@ -1278,6 +1543,42 @@ function startLinearQuiz() {
   openReady(state.selectedUnit);
 }
 
+function openMixedSetup(unit) {
+  state.selectedUnit = unit;
+  setQuestionCount(getSelectedQuestionCount());
+  show("mixedSetup");
+  updateMixedSetupNote();
+}
+
+function getSelectedMixedLevel() {
+  const selected = mixedLevelInputs.find(input => input.checked);
+  return selected ? Number(selected.value) : 1;
+}
+
+function getSelectedMixedOptions() {
+  return {
+    parentheses: mixedOptionInputs.some(input => input.value === "parentheses" && input.checked),
+    powers: mixedOptionInputs.some(input => input.value === "powers" && input.checked)
+  };
+}
+
+function updateMixedSetupNote() {
+  const level = getSelectedMixedLevel();
+  const terms = level + 2;
+  const options = getSelectedMixedOptions();
+  const labels = [];
+  if (options.parentheses) labels.push("括弧");
+  if (options.powers) labels.push("累乗");
+  mixedSetupNote.textContent = `レベル${level} / ${terms}項${labels.length ? ` / ${labels.join("・")}` : ""}`;
+}
+
+function startMixedQuiz() {
+  state.selectedMixedLevel = getSelectedMixedLevel();
+  state.mixedOptions = getSelectedMixedOptions();
+  setQuestionCount(getSelectedQuestionCount(mixedQuestionCountInputs), mixedQuestionCountInputs);
+  openReady(state.selectedUnit);
+}
+
 function openRadicalSetup(unit) {
   state.selectedUnit = unit;
   setQuestionCount(getSelectedQuestionCount());
@@ -1306,6 +1607,11 @@ function startRadicalQuiz() {
   openReady(state.selectedUnit);
 }
 
+function getSelectedQuizMode() {
+  const selected = quizModeInputs.find(input => input.checked);
+  return selected ? selected.value : "practice";
+}
+
 function openReady(unit) {
   state.selectedUnit = unit;
   readyUnitValue.textContent = unit.title;
@@ -1317,6 +1623,7 @@ function openReady(unit) {
 function startQuiz(unit) {
   setQuestionCount(state.questionCount);
   state.selectedUnit = unit;
+  state.quizMode = getSelectedQuizMode();
   state.questions = Array.from({ length: state.questionCount }, () => buildQuestion(unit));
   state.index = 0;
   state.correct = 0;
@@ -1324,7 +1631,7 @@ function startQuiz(unit) {
   state.locked = false;
   state.missedCurrent = false;
   unitLabel.textContent = `${unit.grade}・${unit.title}`;
-  quizTitle.textContent = `${unit.title} ${state.questionCount}問チャレンジ`;
+  quizTitle.textContent = `${unit.title} ${state.questionCount}問${state.quizMode === "test" ? "テスト" : "チャレンジ"}`;
   show("quiz");
   renderQuestion();
 }
@@ -1357,7 +1664,9 @@ function renderQuestion() {
   roundBadge.textContent = `${state.index + 1}問目`;
   progressFill.style.width = `${(state.index / state.questionCount) * 100}%`;
   feedback.className = "feedback";
-  feedback.textContent = "答えを選んでください。";
+  feedback.textContent = state.quizMode === "test"
+    ? "テスト中です。解説は最後にまとめて表示します。"
+    : "答えを選んでください。";
   choiceList.innerHTML = q.choices.map(choice => `
     <button class="choice-button" type="button" data-choice="${escapeHtml(choice)}">${q.htmlChoices ? formatSystemChoiceHtml(choice) : formatChoice(choice)}</button>
   `).join("");
@@ -1374,6 +1683,34 @@ function answerQuestion(choice, button) {
   const correctAnswer = q.answerText || String(q.answer);
   const ok = choice === correctAnswer;
   if (ok && !state.missedCurrent) state.correct += 1;
+
+  if (state.quizMode === "test") {
+    choiceList.querySelectorAll(".choice-button").forEach(choiceButton => {
+      choiceButton.disabled = true;
+    });
+    button.classList.add("selected");
+    feedback.className = "feedback";
+    feedback.textContent = "回答を記録しました。";
+    state.history.push({
+      text: q.text,
+      answer: correctAnswer,
+      choice,
+      ok,
+      retried: false,
+      hint: q.hint || ""
+    });
+
+    setTimeout(() => {
+      state.index += 1;
+      if (state.index >= state.questionCount) {
+        progressFill.style.width = "100%";
+        showResult();
+      } else {
+        renderQuestion();
+      }
+    }, 420);
+    return;
+  }
 
   choiceList.querySelectorAll(".choice-button").forEach(choiceButton => {
     const value = choiceButton.dataset.choice;
@@ -1421,23 +1758,38 @@ function answerQuestion(choice, button) {
 function showResult() {
   const rate = Math.round((state.correct / state.questionCount) * 100);
   const score = rate;
+  const isTestMode = state.quizMode === "test";
   correctValue.textContent = `${state.questionCount}問中${state.correct}問`;
   rateValue.textContent = `${rate}%`;
   scoreValue.textContent = score;
-  resultTitle.textContent = `${state.selectedUnit.title} の結果`;
+  resultTitle.textContent = `${state.selectedUnit.title} の${isTestMode ? "テスト結果" : "結果"}`;
   resultMessage.textContent = rate >= 80
     ? "かなり良いです。この単元は次のレベルへ進めそうです。"
     : rate >= 50
       ? "あと少しです。間違えた問題を見直しましょう。"
       : "まずは符号と累乗のルールをゆっくり確認しましょう。";
 
+  if (isTestMode) {
+    saveTestScore({
+      date: new Date().toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+      unit: state.selectedUnit.title,
+      correct: state.correct,
+      total: state.questionCount,
+      rate
+    });
+  }
+
   historyList.innerHTML = state.history.map(item => {
     const mark = item.ok ? "○" : "×";
     const className = item.ok ? "ok" : "ng";
     const retryLabel = item.retried ? "（やり直し正解）" : "";
-    return `<li class="${className}">${mark} ${formatMath(item.text)} = ${formatMath(item.answer)}　選択：${formatMath(item.choice)}${retryLabel}</li>`;
+    const explanation = isTestMode && item.hint
+      ? `<br><span class="history-explanation">解説：${formatMath(item.hint)}</span>`
+      : "";
+    return `<li class="${className}">${mark} ${formatMath(item.text)} = ${formatMath(item.answer)}　選択：${formatMath(item.choice)}${retryLabel}${explanation}</li>`;
   }).join("");
 
+  renderTestScores();
   show("result");
 }
 
@@ -1451,10 +1803,18 @@ readyStartButton.addEventListener("click", () => startQuiz(state.selectedUnit));
 nextButton.addEventListener("click", renderQuestion);
 linearSetupBackButton.addEventListener("click", () => show("unit"));
 startLinearButton.addEventListener("click", startLinearQuiz);
+mixedSetupBackButton.addEventListener("click", () => show("unit"));
+startMixedButton.addEventListener("click", startMixedQuiz);
 setupBackButton.addEventListener("click", () => show("unit"));
 startRadicalButton.addEventListener("click", startRadicalQuiz);
 linearTypeInputs.forEach(input => {
   input.addEventListener("change", updateLinearStartState);
+});
+mixedLevelInputs.forEach(input => {
+  input.addEventListener("change", updateMixedSetupNote);
+});
+mixedOptionInputs.forEach(input => {
+  input.addEventListener("change", updateMixedSetupNote);
 });
 radicalTypeInputs.forEach(input => {
   input.addEventListener("change", updateRadicalStartState);
@@ -1464,6 +1824,9 @@ questionCountInputs.forEach(input => {
 });
 linearQuestionCountInputs.forEach(input => {
   input.addEventListener("change", () => setQuestionCount(getSelectedQuestionCount(linearQuestionCountInputs), linearQuestionCountInputs));
+});
+mixedQuestionCountInputs.forEach(input => {
+  input.addEventListener("change", () => setQuestionCount(getSelectedQuestionCount(mixedQuestionCountInputs), mixedQuestionCountInputs));
 });
 setupQuestionCountInputs.forEach(input => {
   input.addEventListener("change", () => setQuestionCount(getSelectedQuestionCount(setupQuestionCountInputs), setupQuestionCountInputs));

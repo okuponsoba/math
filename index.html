@@ -103,6 +103,77 @@
       </div>
     </section>
 
+    <section class="setup-panel hidden" id="mixedSetupView" aria-label="四則混合の問題設定">
+      <header class="quiz-top">
+        <div>
+          <button class="text-button" type="button" id="mixedSetupBackButton">← 単元選択へ戻る</button>
+          <p class="eyebrow">中学1年・四則混合</p>
+          <h1>レベルと出題内容を選ぶ</h1>
+          <p class="lead">項の数を選び、括弧や累乗を混ぜるか決めてから始めます。</p>
+        </div>
+      </header>
+
+      <section class="count-panel compact" aria-label="問題数">
+        <p class="count-label">問題数</p>
+        <div class="segmented-control">
+          <label>
+            <input type="radio" name="mixedQuestionCount" value="10" checked>
+            <span>10問</span>
+          </label>
+          <label>
+            <input type="radio" name="mixedQuestionCount" value="20">
+            <span>20問</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="setup-options level-options" aria-label="四則混合のレベル">
+        <label class="setup-option">
+          <input type="radio" name="mixedLevel" value="1" checked>
+          <span>
+            <strong>レベル1</strong>
+            <small>項が3つの四則混合</small>
+          </span>
+        </label>
+        <label class="setup-option">
+          <input type="radio" name="mixedLevel" value="2">
+          <span>
+            <strong>レベル2</strong>
+            <small>項が4つの四則混合</small>
+          </span>
+        </label>
+        <label class="setup-option">
+          <input type="radio" name="mixedLevel" value="3">
+          <span>
+            <strong>レベル3</strong>
+            <small>項が5つの四則混合</small>
+          </span>
+        </label>
+      </section>
+
+      <section class="setup-options mixed-detail-options" aria-label="四則混合の追加条件">
+        <label class="setup-option">
+          <input type="checkbox" name="mixedOption" value="parentheses">
+          <span>
+            <strong>括弧あり</strong>
+            <small>計算の順番を意識する問題を混ぜる</small>
+          </span>
+        </label>
+        <label class="setup-option">
+          <input type="checkbox" name="mixedOption" value="powers">
+          <span>
+            <strong>累乗あり</strong>
+            <small>2乗・3乗を含む問題を混ぜる</small>
+          </span>
+        </label>
+      </section>
+
+      <div class="setup-actions">
+        <button class="primary-button" type="button" id="startMixedButton">開始</button>
+        <p class="setup-note" id="mixedSetupNote">レベルと条件を選んでください。</p>
+      </div>
+    </section>
+
     <section class="setup-panel hidden" id="radicalSetupView" aria-label="根号の問題設定">
       <header class="quiz-top">
         <div>
@@ -180,6 +251,20 @@
         </div>
       </section>
 
+      <section class="count-panel compact" aria-label="モード">
+        <p class="count-label">モード</p>
+        <div class="segmented-control">
+          <label>
+            <input type="radio" name="quizMode" value="practice" checked>
+            <span>練習</span>
+          </label>
+          <label>
+            <input type="radio" name="quizMode" value="test">
+            <span>テスト</span>
+          </label>
+        </div>
+      </section>
+
       <div class="result-actions">
         <button class="primary-button" type="button" id="readyStartButton">スタート</button>
         <button class="secondary-button" type="button" id="readyHomeButton">単元を選び直す</button>
@@ -240,6 +325,11 @@
       <section class="history-box">
         <h2>解いた問題</h2>
         <ol id="historyList"></ol>
+      </section>
+
+      <section class="history-box test-score-box">
+        <h2>テスト記録</h2>
+        <ol id="testScoreList"></ol>
       </section>
 
       <div class="result-actions">
