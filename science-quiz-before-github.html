@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>理科アプリ GitHub前確認版</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans JP", sans-serif;
+      background: #f4f7fb;
+      color: #172033;
+    }
+    main {
+      width: min(860px, 100%);
+      margin: 0 auto;
+      padding: 18px 14px 36px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #dde5ef;
+      border-radius: 8px;
+      padding: 18px;
+      box-shadow: 0 10px 28px rgba(20, 31, 50, .07);
+    }
+    .stack { display: grid; gap: 16px; }
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    h1, h2, p { margin: 0; }
+    h1 { font-size: clamp(24px, 5vw, 34px); line-height: 1.15; }
+    h2 { font-size: 16px; margin-bottom: 8px; }
+    p { color: #5d687a; line-height: 1.6; }
+    .muted { color: #66758a; font-size: 13px; }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    button {
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #fff;
+      min-height: 44px;
+      padding: 10px 14px;
+      color: #172033;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    button.active {
+      background: #172033;
+      border-color: #172033;
+      color: #fff;
+    }
+    button.primary {
+      background: #0284c7;
+      border-color: #0284c7;
+      color: #fff;
+      width: 100%;
+      min-height: 50px;
+      font-size: 16px;
+    }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .category {
+      text-align: left;
+      height: auto;
+      padding: 14px;
+    }
+    .category small {
+      display: block;
+      margin-top: 4px;
+      color: #64748b;
+      font-weight: 800;
+    }
+    button.active small { color: #dbeafe; }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .stat {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+      background: #f8fafc;
+    }
+    .stat b { display: block; font-size: 22px; margin-top: 3px; }
+    .question {
+      border-left: 4px solid #0284c7;
+      padding-left: 14px;
+    }
+    .choices {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .choice {
+      text-align: left;
+      min-height: 58px;
+      line-height: 1.5;
+    }
+    .correct { background: #dcfce7; border-color: #22c55e; }
+    .wrong { background: #fee2e2; border-color: #ef4444; }
+    .notice {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e3a8a;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    @media (max-width: 640px) {
+      .grid, .choices, .summary { grid-template-columns: 1fr; }
+      .card { padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div id="app" class="card stack"></div>
+  </main>
+
+  <script>
+    const shortAnswerQuestions = [
+      {
+        no: 1,
+        unit: "花のつくり",
+        question: "花粉がめしべの柱頭につくことを何というか。",
+        answer: "受粉",
+        choices: ["受粉", "発芽", "蒸散", "呼吸"]
+      },
+      {
+        no: 2,
+        unit: "植物の分類",
+        question: "子葉が1枚の被子植物のなかまを何というか。",
+        answer: "単子葉類",
+        choices: ["単子葉類", "双子葉類", "裸子植物", "シダ植物"]
+      },
+      {
+        no: 3,
+        unit: "動物の分類",
+        question: "背骨をもつ動物を何というか。",
+        answer: "セキツイ動物",
+        choices: ["セキツイ動物", "無セキツイ動物", "節足動物", "軟体動物"]
+      }
+    ];
+
+    const descriptiveQuestions = [
+      ["生物の観察", "動かせるものをルーペで観察するとき、よく見える位置をさがす方法として正しいものはどれか。", "ルーペを目に近づけ、観察するものを前後に動かす。", ["ルーペを観察するものに押しつける。", "ルーペを目から遠ざけ、顔だけを前後に動かす。", "ルーペを太陽に向けてから観察する。"]],
+      ["生物の観察", "顕微鏡の観察を低倍率から始める理由として正しいものはどれか。", "低倍率の方が見える範囲が広く、観察したいものを見つけやすいから。", ["低倍率の方が必ず細部まではっきり見えるから。", "低倍率の方がプレパラートを使わなくてよいから。", "低倍率の方が対物レンズが不要だから。"]],
+      ["生物の観察", "接眼レンズをのぞきながら対物レンズとプレパラートを近づけてはいけない理由として正しいものはどれか。", "対物レンズやプレパラートをこわすことを防ぐため。", ["見える範囲が広くなりすぎるため。", "光が強くなりすぎるため。", "倍率が低くなってしまうため。"]],
+      ["花のつくり", "花の内側から外側への並びとして正しいものはどれか。", "めしべ、おしべ、花弁、がく", ["がく、花弁、おしべ、めしべ", "おしべ、めしべ、がく、花弁", "花弁、がく、めしべ、おしべ"]],
+      ["花のつくり", "受粉とはどのようなことか。", "花粉がめしべの柱頭につくこと。", ["胚珠が果実になること。", "子房が種子になること。", "花弁が開くこと。"]],
+      ["花のつくり", "サクラで受粉が起こった後、胚珠と子房はそれぞれどうなるか。", "胚珠は種子になり、子房は果実になる。", ["胚珠は果実になり、子房は種子になる。", "胚珠は花粉になり、子房は柱頭になる。", "胚珠は葉になり、子房は根になる。"]],
+      ["裸子植物と被子植物", "裸子植物の説明として正しいものはどれか。", "胚珠が子房に包まれていない植物。", ["胚珠が子房に包まれている植物。", "種子をつくらず胞子だけでふえる植物。", "花粉をつくらない植物。"]],
+      ["裸子植物と被子植物", "アブラナは果実ができ、マツは果実ができない理由として正しいものはどれか。", "アブラナには子房があり、子房が果実になるが、マツには子房がないから。", ["アブラナには胚珠がなく、マツには胚珠があるから。", "アブラナは裸子植物で、マツは被子植物だから。", "アブラナは受粉せず、マツだけが受粉するから。"]],
+      ["裸子植物と被子植物", "単子葉類と双子葉類の子葉の数のちがいとして正しいものはどれか。", "単子葉類は1枚、双子葉類は2枚。", ["単子葉類は2枚、双子葉類は1枚。", "単子葉類も双子葉類も1枚。", "単子葉類も双子葉類も2枚。"]],
+      ["裸子植物と被子植物", "単子葉類と双子葉類の葉脈の特徴として正しいものはどれか。", "単子葉類は平行脈、双子葉類は網状脈。", ["単子葉類は網状脈、双子葉類は平行脈。", "単子葉類も双子葉類も平行脈。", "単子葉類も双子葉類も網状脈。"]],
+      ["裸子植物と被子植物", "単子葉類と双子葉類の根のつくりとして正しいものはどれか。", "単子葉類はひげ根、双子葉類は主根と側根。", ["単子葉類は主根と側根、双子葉類はひげ根。", "単子葉類も双子葉類もひげ根。", "単子葉類も双子葉類も主根と側根。"]],
+      ["植物の分類", "シダ植物とコケ植物のからだのつくりのちがいとして正しいものはどれか。", "シダ植物には葉・茎・根の区別があるが、コケ植物には葉・茎・根の区別がない。", ["シダ植物には葉・茎・根の区別がないが、コケ植物にはある。", "シダ植物もコケ植物も葉・茎・根の区別がある。", "シダ植物もコケ植物も葉・茎・根の区別がない。"]],
+      ["植物の分類", "ゼニゴケの胞子はどこでつくられるか。", "雌株でつくられる。", ["雄株でつくられる。", "根でつくられる。", "花弁でつくられる。"]],
+      ["植物の分類", "コケ植物の仮根のはたらきとして正しいものはどれか。", "からだを地面などに固定する。", ["水や養分を運ぶ管としてはたらく。", "花粉をつくる。", "種子をつくる。"]],
+      ["植物の分類", "種子植物を2つのなかまに分類する基準として正しいものはどれか。", "胚珠が子房に包まれているかどうか。", ["葉の色が濃いか薄いか。", "花が大きいか小さいか。", "根が長いか短いか。"]],
+      ["植物の分類", "単子葉類の葉脈と根のつくりとして正しいものはどれか。", "葉脈は平行脈で、根はひげ根である。", ["葉脈は網状脈で、根は主根と側根である。", "葉脈は平行脈で、根は主根と側根である。", "葉脈は網状脈で、根はひげ根である。"]],
+      ["動物の分類", "セキツイ動物と無セキツイ動物の分類基準として正しいものはどれか。", "背骨があるかないか。", ["体温が一定かどうか。", "卵を産むかどうか。", "水中で生活するかどうか。"]],
+      ["動物の分類", "両生類の呼吸のしかたとして正しいものはどれか。", "幼生はえらで呼吸し、成体は肺と皮膚で呼吸する。", ["幼生も成体も肺だけで呼吸する。", "幼生は肺で呼吸し、成体はえらで呼吸する。", "幼生も成体もえらだけで呼吸する。"]],
+      ["動物の分類", "胎生の説明として正しいものはどれか。", "母親の体内で子を育てて産むうまれ方。", ["卵を産み、卵から子がかえるうまれ方。", "胞子をつくってふえること。", "体が分かれて新しい個体になること。"]],
+      ["動物の分類", "卵生の説明として正しいものはどれか。", "卵を産み、卵から子がかえるうまれ方。", ["母親の体内で子を育てて産むうまれ方。", "胎盤で子を育てるうまれ方。", "種子から子がかえるうまれ方。"]],
+      ["動物の分類", "ハチュウ類や鳥類の卵の特徴として正しいものはどれか。", "殻があり、乾燥を防ぐつくりになっている。", ["殻がなく、水中でしか育たない。", "花粉を受け取るつくりがある。", "背骨がない。"]],
+      ["動物の分類", "軟体動物にはえらをもつものが多い。このことからわかる生活場所として正しいものはどれか。", "水中で生活するものが多い。", ["空中で生活するものが多い。", "土の中だけで生活するものが多い。", "すべて陸上で生活する。"]],
+      ["動物の分類", "節足動物の外骨格のはたらきとして正しいものはどれか。", "からだを保護し、支える。", ["花粉をつくる。", "水を吸い上げる。", "背骨として体内にある。"]],
+      ["動物の分類", "昆虫類に共通する特徴として正しいものはどれか。", "からだは頭・胸・腹の3つに分かれ、胸に3対、つまり6本のあしがある。", ["からだは頭・胸の2つに分かれ、腹に4対のあしがある。", "からだは1つにまとまり、あしは10本ある。", "からだは頭・腹の2つに分かれ、胸に1対のあしがある。"]]
+    ].map((q, i) => ({
+      no: i + 1,
+      category: q[0],
+      unit: q[0],
+      question: q[1],
+      answer: q[2],
+      choices: shuffle([q[2], ...q[3]])
+    }));
+
+    const allCategory = "全部";
+    const categories = [allCategory, "生物の観察", "花のつくり", "裸子植物と被子植物", "植物の分類", "動物の分類"];
+    const app = document.getElementById("app");
+    const state = {
+      mode: "記述対策",
+      grade: "中1",
+      category: allCategory,
+      order: "number",
+      questions: [],
+      index: 0,
+      selected: {},
+      finished: false
+    };
+
+    function shuffle(items) {
+      const copied = [...items];
+      for (let i = copied.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copied[i], copied[j]] = [copied[j], copied[i]];
+      }
+      return copied;
+    }
+
+    function set(key, value) {
+      state[key] = value;
+      render();
+    }
+
+    function availableQuestions() {
+      if (state.mode === "一問一答") return shortAnswerQuestions;
+      if (state.category === allCategory) return descriptiveQuestions;
+      return descriptiveQuestions.filter(q => q.category === state.category);
+    }
+
+    function startQuiz() {
+      const qs = availableQuestions();
+      state.questions = state.order === "random" ? shuffle(qs) : [...qs];
+      state.index = 0;
+      state.selected = {};
+      state.finished = false;
+      renderQuiz();
+    }
+
+    function choose(choice) {
+      const current = state.questions[state.index];
+      state.selected[current.no] = choice;
+      if (state.index + 1 >= state.questions.length) {
+        state.finished = true;
+      } else {
+        state.index += 1;
+      }
+      renderQuiz();
+    }
+
+    function renderButtons(items, current, onClick, className = "") {
+      return items.map(item => `<button class="${className} ${item === current ? "active" : ""}" data-value="${item}">${item}</button>`).join("");
+    }
+
+    function bindButtons(selector, callback) {
+      document.querySelectorAll(selector).forEach(button => {
+        button.addEventListener("click", () => callback(button.dataset.value));
+      });
+    }
+
+    function render() {
+      const count = availableQuestions().length;
+      const categoryHtml = state.mode === "記述対策" ? `
+        <section>
+          <h2>記述対策の分野</h2>
+          <div class="grid">
+            ${categories.map(category => {
+              const n = category === allCategory ? descriptiveQuestions.length : descriptiveQuestions.filter(q => q.category === category).length;
+              return `<button class="category ${category === state.category ? "active" : ""}" data-category="${category}">${category}<small>${n}問</small></button>`;
+            }).join("")}
+          </div>
+        </section>
+      ` : `
+        <section class="notice">一問一答を選んだときは、今まで通り「学年・分野・A/B」で進める想定です。この確認版では見た目確認用に中1生物のサンプルだけ入れています。</section>
+      `;
+
+      app.innerHTML = `
+        <div class="row">
+          <div>
+            <h1>理科 一問一答</h1>
+            <p>GitHubに上げる前の確認版です。記述対策だけ分野別に分けています。</p>
+          </div>
+        </div>
+
+        <section>
+          <h2>問題タイプ</h2>
+          <div class="controls">${["一問一答", "記述対策"].map(item => `<button class="${item === state.mode ? "active" : ""}" data-mode="${item}">${item}</button>`).join("")}</div>
+        </section>
+
+        <section>
+          <h2>学年</h2>
+          <div class="controls">${["中1", "中2", "中3"].map(item => `<button class="${item === state.grade ? "active" : ""}" data-grade="${item}">${item}</button>`).join("")}</div>
+        </section>
+
+        ${categoryHtml}
+
+        <section>
+          <h2>出題順</h2>
+          <div class="controls">
+            <button class="${state.order === "number" ? "active" : ""}" data-order="number">問題番号順</button>
+            <button class="${state.order === "random" ? "active" : ""}" data-order="random">ランダム</button>
+          </div>
+        </section>
+
+        <section class="summary">
+          <div class="stat"><span class="muted">タイプ</span><b>${state.mode}</b></div>
+          <div class="stat"><span class="muted">選択中</span><b>${count}問</b></div>
+          <div class="stat"><span class="muted">保存方針</span><b>共通</b></div>
+        </section>
+
+        <button class="primary" id="start">スタート</button>
+      `;
+
+      document.querySelectorAll("[data-mode]").forEach(button => {
+        button.addEventListener("click", () => set("mode", button.dataset.mode));
+      });
+      document.querySelectorAll("[data-grade]").forEach(button => {
+        button.addEventListener("click", () => set("grade", button.dataset.grade));
+      });
+      document.querySelectorAll("[data-category]").forEach(button => {
+        button.addEventListener("click", () => set("category", button.dataset.category));
+      });
+      document.querySelectorAll("[data-order]").forEach(button => {
+        button.addEventListener("click", () => set("order", button.dataset.order));
+      });
+      document.getElementById("start").addEventListener("click", startQuiz);
+    }
+
+    function renderQuiz() {
+      if (state.finished) return renderResult();
+      const q = state.questions[state.index];
+      const label = state.mode === "記述対策" ? `${state.grade}・記述対策・${q.category}` : `${state.grade}・一問一答`;
+
+      app.innerHTML = `
+        <div class="row">
+          <div>
+            <h1>${state.mode}</h1>
+            <p>${label}</p>
+          </div>
+          <button id="home">ホーム</button>
+        </div>
+        <section class="question stack">
+          <p class="muted">第${state.index + 1}問 / ${state.questions.length}問　${q.unit}</p>
+          <h2>${q.question}</h2>
+        </section>
+        <section class="choices">
+          ${q.choices.map(choice => `<button class="choice" data-choice="${choice}">${choice}</button>`).join("")}
+        </section>
+      `;
+      document.getElementById("home").addEventListener("click", render);
+      document.querySelectorAll("[data-choice]").forEach(button => {
+        button.addEventListener("click", () => choose(button.dataset.choice));
+      });
+    }
+
+    function renderResult() {
+      const score = state.questions.filter(q => state.selected[q.no] === q.answer).length;
+      app.innerHTML = `
+        <div class="row">
+          <div>
+            <h1>結果</h1>
+            <p>${state.mode}・${state.category}</p>
+          </div>
+          <button id="home">ホームへ戻る</button>
+        </div>
+        <section class="summary">
+          <div class="stat"><span class="muted">得点</span><b>${score}/${state.questions.length}</b></div>
+          <div class="stat"><span class="muted">正答率</span><b>${Math.round(score / state.questions.length * 100)}%</b></div>
+          <div class="stat"><span class="muted">保存</span><b>確認版</b></div>
+        </section>
+        <section class="stack">
+          ${state.questions.map(q => {
+            const selected = state.selected[q.no];
+            const ok = selected === q.answer;
+            return `
+              <div class="card ${ok ? "correct" : "wrong"}">
+                <p class="muted">第${q.no}問 ${q.unit}</p>
+                <h2>${q.question}</h2>
+                <p>選んだ答え：<b>${selected || "未回答"}</b></p>
+                <p>正しい答え：<b>${q.answer}</b></p>
+              </div>
+            `;
+          }).join("")}
+        </section>
+      `;
+      document.getElementById("home").addEventListener("click", render);
+    }
+
+    render();
+  </script>
+</body>
+</html>
