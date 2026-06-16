@@ -1134,7 +1134,7 @@ function escapeHtml(value) {
 }
 
 function rootMathMl(radicand) {
-  return `<span class="root-expression" aria-label="ルート${escapeHtml(radicand)}"><span class="root-symbol">√</span><span class="root-radicand">${escapeHtml(radicand)}</span></span>`;
+  return `<span class="root-expression" aria-label="ルート${escapeHtml(radicand)}"><span class="root-sign" aria-hidden="true">√</span><span class="root-radicand">${escapeHtml(radicand)}</span></span>`;
 }
 
 function renderLatex(tex) {
@@ -1277,9 +1277,21 @@ function formatAnswerChoice(value) {
   return html.replaceAll("\n", "<br>");
 }
 
+function answerChoiceToLatex(value) {
+  const raw = String(value).trim();
+  const fractionMatch = raw.match(/^(-?\d*√\d+|-?\d+)\/(-?\d*√\d+|-?\d+)$/);
+  if (fractionMatch) {
+    return `\\frac{${termToLatex(fractionMatch[1])}}{${termToLatex(fractionMatch[2])}}`;
+  }
+  if (/^-?\d*√\d+$/.test(raw)) return termToLatex(raw);
+  if (/^-?\d+$/.test(raw)) return raw;
+  return null;
+}
+
 function formatChoice(value) {
   const raw = String(value);
-  if (raw.includes("√")) return formatAnswerChoice(raw);
+  const latex = answerChoiceToLatex(raw);
+  if (latex) return renderLatex(latex) || formatMath(raw).replaceAll("\n", "<br>");
   return formatMath(raw).replaceAll("\n", "<br>");
 }
 
@@ -1642,15 +1654,15 @@ function formatQuestionText(value) {
   for (const separator of separators) {
     const index = raw.indexOf(separator);
     if (index > -1) {
-      const instruction = raw.slice(0, index + separator.length);
       const expression = raw.slice(index + separator.length).trim();
+      const fitClass = expression.length > 28 ? "fit-xlong" : expression.length > 20 ? "fit-long" : expression.length > 14 ? "fit-medium" : "";
       return `
-        <span class="question-instruction">${escapeHtml(instruction)}</span>
-        <span class="question-expression">${formatMath(expression)}</span>
+        <span class="question-expression ${fitClass}">${formatMath(expression)}</span>
       `;
     }
   }
-  return `<span class="question-expression">${formatMath(raw)}</span>`;
+  const fitClass = raw.length > 28 ? "fit-xlong" : raw.length > 20 ? "fit-long" : raw.length > 14 ? "fit-medium" : "";
+  return `<span class="question-expression ${fitClass}">${formatMath(raw)}</span>`;
 }
 
 function renderQuestion() {
