@@ -424,6 +424,15 @@ h1 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.algebra-level-options .setup-option {
+  min-height: 112px;
+  padding: 14px 16px;
+}
+
+.algebra-level-options .setup-option small {
+  margin-top: 6px;
+}
+
 .setup-option {
   min-height: 150px;
   padding: 16px;

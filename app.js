@@ -21,6 +21,12 @@ const units = [
         makeQuestion: makePowerQuestion
       },
       {
+        id: "algebra-expression",
+        title: "文字式",
+        description: "同類項をまとめる・かっこを外す基本練習",
+        makeQuestion: makeAlgebraExpressionQuestion
+      },
+      {
         id: "mixed",
         title: "四則混合",
         description: "項の数・括弧・累乗を選んで、計算の順番を練習",
@@ -58,6 +64,7 @@ const state = {
   selectedRadicalTypes: ["transform", "rationalize", "arithmetic"],
   selectedLinearTypes: ["integer"],
   selectedMixedLevel: 1,
+  selectedAlgebraLevel: 1,
   mixedOptions: {
     parentheses: false,
     powers: false
@@ -76,6 +83,7 @@ const homeView = document.querySelector("#homeView");
 const unitView = document.querySelector("#unitView");
 const linearSetupView = document.querySelector("#linearSetupView");
 const mixedSetupView = document.querySelector("#mixedSetupView");
+const algebraSetupView = document.querySelector("#algebraSetupView");
 const radicalSetupView = document.querySelector("#radicalSetupView");
 const readyView = document.querySelector("#readyView");
 const quizView = document.querySelector("#quizView");
@@ -112,19 +120,24 @@ const readyCountValue = document.querySelector("#readyCountValue");
 const setupBackButton = document.querySelector("#setupBackButton");
 const linearSetupBackButton = document.querySelector("#linearSetupBackButton");
 const mixedSetupBackButton = document.querySelector("#mixedSetupBackButton");
+const algebraSetupBackButton = document.querySelector("#algebraSetupBackButton");
 const startLinearButton = document.querySelector("#startLinearButton");
 const startMixedButton = document.querySelector("#startMixedButton");
+const startAlgebraButton = document.querySelector("#startAlgebraButton");
 const startRadicalButton = document.querySelector("#startRadicalButton");
 const setupNote = document.querySelector("#setupNote");
 const linearSetupNote = document.querySelector("#linearSetupNote");
 const mixedSetupNote = document.querySelector("#mixedSetupNote");
+const algebraSetupNote = document.querySelector("#algebraSetupNote");
 const linearTypeInputs = [...document.querySelectorAll('input[name="linearType"]')];
 const mixedLevelInputs = [...document.querySelectorAll('input[name="mixedLevel"]')];
+const algebraLevelInputs = [...document.querySelectorAll('input[name="algebraLevel"]')];
 const mixedOptionInputs = [...document.querySelectorAll('input[name="mixedOption"]')];
 const radicalTypeInputs = [...document.querySelectorAll('input[name="radicalType"]')];
 const questionCountInputs = [...document.querySelectorAll('input[name="questionCount"]')];
 const linearQuestionCountInputs = [...document.querySelectorAll('input[name="linearQuestionCount"]')];
 const mixedQuestionCountInputs = [...document.querySelectorAll('input[name="mixedQuestionCount"]')];
+const algebraQuestionCountInputs = [...document.querySelectorAll('input[name="algebraQuestionCount"]')];
 const setupQuestionCountInputs = [...document.querySelectorAll('input[name="setupQuestionCount"]')];
 const quizModeInputs = [...document.querySelectorAll('input[name="quizMode"]')];
 const TEST_SCORE_KEY = "mathAppTestScores";
@@ -303,6 +316,215 @@ function makeRuleConfusionChoices(correctAnswer, confusedAnswer) {
     confusedAnswer,
     -confusedAnswer
   ]);
+}
+
+function coefficientText(value) {
+  if (value === 1) return "";
+  if (value === -1) return "-";
+  return String(value);
+}
+
+function linearExpressionText(xCoeff, constant = 0) {
+  if (xCoeff === 0) return String(constant);
+  const xPart = `${coefficientText(xCoeff)}x`;
+  if (constant === 0) return xPart;
+  return constant > 0 ? `${xPart} + ${constant}` : `${xPart} - ${Math.abs(constant)}`;
+}
+
+function signedLinearTermText(xCoeff, isFirst = false) {
+  if (xCoeff === 0) return "";
+  const absText = `${coefficientText(Math.abs(xCoeff))}x`;
+  if (isFirst) return xCoeff < 0 ? `-${absText}` : absText;
+  return xCoeff < 0 ? ` - ${absText}` : ` + ${absText}`;
+}
+
+function signedNumberTermText(value, isFirst = false) {
+  if (value === 0) return "";
+  if (isFirst) return String(value);
+  return value < 0 ? ` - ${Math.abs(value)}` : ` + ${value}`;
+}
+
+function expressionFromParts(parts) {
+  let text = "";
+  parts.forEach(part => {
+    const chunk = part.type === "x"
+      ? signedLinearTermText(part.value, text === "")
+      : signedNumberTermText(part.value, text === "");
+    text += chunk;
+  });
+  return text || "0";
+}
+
+function parenthesizedLinear(xCoeff, constant) {
+  return `(${linearExpressionText(xCoeff, constant)})`;
+}
+
+function makeAlgebraChoices(answerText, candidates) {
+  const choices = new Set([answerText]);
+  candidates.forEach(candidate => {
+    if (candidate && candidate !== answerText) choices.add(candidate);
+  });
+  while (choices.size < 4) {
+    const xCoeff = randomNonZeroInt(-10, 10);
+    const constant = randomInt(-14, 14);
+    const candidate = linearExpressionText(xCoeff, constant);
+    if (candidate !== answerText) choices.add(candidate);
+  }
+  return [...choices].slice(0, 4).sort(() => Math.random() - 0.5);
+}
+
+function makeAlgebraMonomialChoices(answerCoeff, candidates = []) {
+  const answerText = linearExpressionText(answerCoeff, 0);
+  const choices = new Set([answerText]);
+  candidates.forEach(value => {
+    if (Number.isFinite(value) && value !== 0 && value !== answerCoeff) {
+      choices.add(linearExpressionText(value, 0));
+    }
+  });
+  while (choices.size < 4) {
+    const offset = randomNonZeroInt(-8, 8);
+    const candidate = answerCoeff + offset;
+    if (candidate !== 0 && candidate !== answerCoeff) {
+      choices.add(linearExpressionText(candidate, 0));
+    }
+  }
+  return [...choices].slice(0, 4).sort(() => Math.random() - 0.5);
+}
+
+function makeAlgebraLevel1Question() {
+  const type = randomChoice(["add", "subtract", "multiply"]);
+  const targetNegative = Math.random() < 0.5;
+  let a = randomNonZeroInt(-9, 9);
+  let b = randomNonZeroInt(-9, 9);
+  let answer = type === "subtract" ? a - b : a + b;
+  let guard = 0;
+  while (
+    guard < 80 &&
+    (answer === 0 || (targetNegative ? answer > 0 : answer < 0) || Math.abs(answer) > 12)
+  ) {
+    a = randomNonZeroInt(-9, 9);
+    b = randomNonZeroInt(-9, 9);
+    answer = type === "subtract" ? a - b : a + b;
+    guard += 1;
+  }
+
+  if (type === "multiply") {
+    const xCoeff = randomNonZeroInt(-9, 9);
+    const multiplier = randomChoice([-5, -4, -3, -2, 2, 3, 4, 5]);
+    const answerCoeff = xCoeff * multiplier;
+    const answerText = linearExpressionText(answerCoeff, 0);
+    const leftFirst = Math.random() < 0.5;
+    const text = leftFirst
+      ? `次の式を簡単にせよ：${linearExpressionText(xCoeff, 0)} × ${multiplier}`
+      : `次の式を簡単にせよ：${multiplier} × ${linearExpressionText(xCoeff, 0)}`;
+    return {
+      text,
+      answerText,
+      choices: makeAlgebraMonomialChoices(answerCoeff, [
+        -answerCoeff,
+        xCoeff + multiplier,
+        xCoeff - multiplier
+      ]),
+      hint: `文字式のかけ算です。係数 ${xCoeff} と ${multiplier} をかけて、文字 x をつけます。`
+    };
+  }
+
+  const text = type === "subtract"
+    ? `次の式を簡単にせよ：${linearExpressionText(a, 0)} - ${parenthesizedLinear(b, 0)}`
+    : `次の式を簡単にせよ：${expressionFromParts([{ type: "x", value: a }, { type: "x", value: b }])}`;
+  const answerText = linearExpressionText(answer, 0);
+  const wrongProduct = a * b;
+  const wrongSubtract = a - b;
+  return {
+    text,
+    answerText,
+    choices: makeAlgebraMonomialChoices(answer, [
+      -answer,
+      wrongProduct,
+      wrongSubtract
+    ]),
+    hint: type === "subtract"
+      ? `文字式の引き算です。ひく項の符号を反対にしてから、係数をまとめます。`
+      : `項は2個です。同じ文字の項なので、係数だけを足します。${a} と ${b} の和を考えます。`
+  };
+}
+
+function makeAlgebraLevel2Question() {
+  const termCount = randomInt(4, 5);
+  const parts = [];
+  let xSum = 0;
+  let nSum = 0;
+  for (let i = 0; i < termCount; i += 1) {
+    const useX = i < 2 || Math.random() < 0.5;
+    const value = useX ? randomNonZeroInt(-9, 9) : randomNonZeroInt(-12, 12);
+    parts.push({ type: useX ? "x" : "n", value });
+    if (useX) xSum += value;
+    else nSum += value;
+  }
+  if (xSum === 0) {
+    parts[0].value += parts[0].value > 0 ? 1 : -1;
+    xSum += parts[0].value > 0 ? 1 : -1;
+  }
+  const answerText = linearExpressionText(xSum, nSum);
+  return {
+    text: `次の式を簡単にせよ：${expressionFromParts(parts)}`,
+    answerText,
+    choices: makeAlgebraChoices(answerText, [
+      linearExpressionText(xSum, -nSum),
+      linearExpressionText(-xSum, nSum),
+      linearExpressionText(xSum + nSum, 0)
+    ]),
+    hint: `文字の項と数だけの項を分けてまとめます。xの係数の和は ${xSum}、数だけの項の和は ${nSum} です。`
+  };
+}
+
+function makeAlgebraLevel3Question() {
+  const type = randomInt(1, 2);
+  const a = randomNonZeroInt(-8, 8);
+  const b = randomInt(-12, 12);
+  const c = randomNonZeroInt(-8, 8);
+  const d = randomInt(-12, 12);
+
+  if (type === 1) {
+    const multiplier = randomChoice([-4, -3, -2, 2, 3, 4, 5]);
+    const answerCoeff = multiplier * a;
+    const answerConstant = multiplier * b;
+    const answerText = linearExpressionText(answerCoeff, answerConstant);
+    const text = `次の式を簡単にせよ：${multiplier}${parenthesizedLinear(a, b)}`;
+    return {
+      text,
+      answerText,
+      choices: makeAlgebraChoices(answerText, [
+        linearExpressionText(multiplier * a, b),
+        linearExpressionText(a, multiplier * b),
+        linearExpressionText(multiplier + a, multiplier + b)
+      ]),
+      hint: `かっこの前の ${multiplier} を、xの項にも数の項にも両方かけます。`
+    };
+  }
+
+  const leftMultiplier = randomChoice([-3, -2, 2, 3, 4]);
+  const rightMultiplier = randomChoice([-4, -3, -2, 2, 3]);
+  const answerCoeff = leftMultiplier * a + rightMultiplier * c;
+  const answerConstant = leftMultiplier * b + rightMultiplier * d;
+  const answerText = linearExpressionText(answerCoeff, answerConstant);
+  const text = `次の式を簡単にせよ：${leftMultiplier}${parenthesizedLinear(a, b)} ${rightMultiplier < 0 ? "-" : "+"} ${Math.abs(rightMultiplier)}${parenthesizedLinear(c, d)}`;
+  return {
+    text,
+    answerText,
+    choices: makeAlgebraChoices(answerText, [
+      linearExpressionText(leftMultiplier * a + rightMultiplier * c, b + d),
+      linearExpressionText(leftMultiplier * a - rightMultiplier * c, leftMultiplier * b - rightMultiplier * d),
+      linearExpressionText(a + c, leftMultiplier * b + rightMultiplier * d)
+    ]),
+    hint: `まずそれぞれのかっこを外します。そのあと、xの項どうし、数だけの項どうしをまとめます。`
+  };
+}
+
+function makeAlgebraExpressionQuestion() {
+  if (state.selectedAlgebraLevel === 1) return makeAlgebraLevel1Question();
+  if (state.selectedAlgebraLevel === 2) return makeAlgebraLevel2Question();
+  return makeAlgebraLevel3Question();
 }
 
 function makeSignReflexQuestion() {
@@ -1488,6 +1710,8 @@ function renderUnitSelect(gradeIndex) {
         openLinearSetup(unit);
       } else if (unit.id === "mixed") {
         openMixedSetup(unit);
+      } else if (unit.id === "algebra-expression") {
+        openAlgebraSetup(unit);
       } else if (unit.id === "radical") {
         openRadicalSetup(unit);
       } else {
@@ -1507,6 +1731,7 @@ function show(view) {
   unitView.classList.toggle("hidden", view !== "unit");
   linearSetupView.classList.toggle("hidden", view !== "linearSetup");
   mixedSetupView.classList.toggle("hidden", view !== "mixedSetup");
+  algebraSetupView.classList.toggle("hidden", view !== "algebraSetup");
   radicalSetupView.classList.toggle("hidden", view !== "radicalSetup");
   readyView.classList.toggle("hidden", view !== "ready");
   quizView.classList.toggle("hidden", view !== "quiz");
@@ -1520,7 +1745,7 @@ function getSelectedQuestionCount(inputs = questionCountInputs) {
 
 function setQuestionCount(value, sourceInputs = []) {
   state.questionCount = Number(value);
-  [...questionCountInputs, ...linearQuestionCountInputs, ...mixedQuestionCountInputs, ...setupQuestionCountInputs].forEach(input => {
+  [...questionCountInputs, ...linearQuestionCountInputs, ...mixedQuestionCountInputs, ...algebraQuestionCountInputs, ...setupQuestionCountInputs].forEach(input => {
     if (!sourceInputs.includes(input)) {
       input.checked = Number(input.value) === state.questionCount;
     }
@@ -1588,6 +1813,34 @@ function startMixedQuiz() {
   state.selectedMixedLevel = getSelectedMixedLevel();
   state.mixedOptions = getSelectedMixedOptions();
   setQuestionCount(getSelectedQuestionCount(mixedQuestionCountInputs), mixedQuestionCountInputs);
+  openReady(state.selectedUnit);
+}
+
+function openAlgebraSetup(unit) {
+  state.selectedUnit = unit;
+  setQuestionCount(getSelectedQuestionCount());
+  show("algebraSetup");
+  updateAlgebraSetupNote();
+}
+
+function getSelectedAlgebraLevel() {
+  const selected = algebraLevelInputs.find(input => input.checked);
+  return selected ? Number(selected.value) : 1;
+}
+
+function updateAlgebraSetupNote() {
+  const level = getSelectedAlgebraLevel();
+  const labels = {
+    1: "項が2個",
+    2: "項が4つ〜5つ",
+    3: "分配法則"
+  };
+  algebraSetupNote.textContent = `LV${level} / ${labels[level]}`;
+}
+
+function startAlgebraQuiz() {
+  state.selectedAlgebraLevel = getSelectedAlgebraLevel();
+  setQuestionCount(getSelectedQuestionCount(algebraQuestionCountInputs), algebraQuestionCountInputs);
   openReady(state.selectedUnit);
 }
 
@@ -1817,6 +2070,8 @@ linearSetupBackButton.addEventListener("click", () => show("unit"));
 startLinearButton.addEventListener("click", startLinearQuiz);
 mixedSetupBackButton.addEventListener("click", () => show("unit"));
 startMixedButton.addEventListener("click", startMixedQuiz);
+algebraSetupBackButton.addEventListener("click", () => show("unit"));
+startAlgebraButton.addEventListener("click", startAlgebraQuiz);
 setupBackButton.addEventListener("click", () => show("unit"));
 startRadicalButton.addEventListener("click", startRadicalQuiz);
 linearTypeInputs.forEach(input => {
@@ -1824,6 +2079,9 @@ linearTypeInputs.forEach(input => {
 });
 mixedLevelInputs.forEach(input => {
   input.addEventListener("change", updateMixedSetupNote);
+});
+algebraLevelInputs.forEach(input => {
+  input.addEventListener("change", updateAlgebraSetupNote);
 });
 mixedOptionInputs.forEach(input => {
   input.addEventListener("change", updateMixedSetupNote);
@@ -1839,6 +2097,9 @@ linearQuestionCountInputs.forEach(input => {
 });
 mixedQuestionCountInputs.forEach(input => {
   input.addEventListener("change", () => setQuestionCount(getSelectedQuestionCount(mixedQuestionCountInputs), mixedQuestionCountInputs));
+});
+algebraQuestionCountInputs.forEach(input => {
+  input.addEventListener("change", () => setQuestionCount(getSelectedQuestionCount(algebraQuestionCountInputs), algebraQuestionCountInputs));
 });
 setupQuestionCountInputs.forEach(input => {
   input.addEventListener("change", () => setQuestionCount(getSelectedQuestionCount(setupQuestionCountInputs), setupQuestionCountInputs));
